@@ -1,0 +1,24 @@
+language: go
+go:
+    - 1.8.x
+    - 1.9.x
+    - tip
+before_install:
+    - export PATH=$PATH:$GOPATH/bin
+    - go get github.com/modocache/gover
+    - go get github.com/mattn/goveralls
+    - go get golang.org/x/tools/cmd/cover
+    - go get github.com/golang/dep/cmd/dep
+    - go get github.com/golang/lint/golint
+install:
+    - dep ensure
+script:
+    - diff -u <(echo -n) <(gofmt -d -s $(find . -type f -name '*.go' -not -path "./vendor/*"))
+    - go vet
+    - golint
+    - go test -coverprofile=parser.coverprofile
+    - gover
+    - goveralls -coverprofile=gover.coverprofile -service=travis-ci
+matrix:
+  allow_failures:
+    - go: tip
