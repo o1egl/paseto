@@ -114,3 +114,28 @@ func fillValue(data []byte, i interface{}) error {
 	}
 	return nil
 }
+
+func createToken(header []byte, body []byte, footer []byte) string {
+	encodedPayload := make([]byte, tokenEncoder.EncodedLen(len(body)))
+	tokenEncoder.Encode(encodedPayload, body)
+
+	footerLen := 0
+	var encodedFooter []byte
+	if len(footer) > 0 {
+		encodedFooter = make([]byte, tokenEncoder.EncodedLen(len(footer)))
+		tokenEncoder.Encode(encodedFooter, footer)
+		footerLen = len(encodedFooter) + 1
+	}
+
+	token := make([]byte, len(header)+len(encodedPayload)+footerLen)
+
+	offset := 0
+	offset += copy(token[offset:], header)
+	offset += copy(token[offset:], encodedPayload)
+	if encodedFooter != nil {
+		offset += copy(token[offset:], []byte("."))
+		copy(token[offset:], encodedFooter)
+
+	}
+	return string(token)
+}

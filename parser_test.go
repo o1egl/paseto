@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/crypto/ed25519"
 )
 
 func TestParse(t *testing.T) {
@@ -28,12 +29,25 @@ func TestParse(t *testing.T) {
 			payload: []byte("Lorem Ipsum"),
 			footer:  []byte("footer"),
 		},
+		"v2.local.FGVEQLywggpvH0AzKtLXz0QRmGYuC6yvl05z9GIX0cnol6UK94cfV77AXnShlUcNgpDR12FrQiurS8jxBRmvoIKmeMWC5wY9Y6w.Q3VvbiBBbHBpbnVz": {
+			version: V2,
+			payload: []byte("Love is stronger than hate or fear"),
+			footer:  []byte("Cuon Alpinus"),
+		},
+		"v2.public.RnJhbmsgRGVuaXMgcm9ja3O7MPuu90WKNyvBUUhAGFmi4PiPOr2bN2ytUSU-QWlj8eNefki2MubssfN1b8figynnY0WusRPwIQ-o0HSZOS0F.Q3VvbiBBbHBpbnVz": {
+			version: V2,
+			payload: []byte("Frank Denis rocks"),
+			footer:  []byte("Cuon Alpinus"),
+		},
 	}
+
+	b, _ := hex.DecodeString("1eb9dbbbbc047c03fd70604e0071f0987e16b28b757225c11f00415d0e20b1a2")
+	v2PublicKey := ed25519.PublicKey(b)
 
 	for token, info := range cases {
 		var payload []byte
 		var footer []byte
-		if ver, err := Parse(token, &payload, &footer, symmetricKey, map[Version]crypto.PublicKey{V1: rsaPublicKey}); assert.NoError(t, err) {
+		if ver, err := Parse(token, &payload, &footer, symmetricKey, map[Version]crypto.PublicKey{V1: rsaPublicKey, V2: v2PublicKey}); assert.NoError(t, err) {
 			assert.Equal(t, info.version, ver)
 			assert.Equal(t, info.payload, payload)
 			assert.Equal(t, info.footer, footer)
@@ -93,6 +107,10 @@ func TestGetTokenInfo(t *testing.T) {
 			version: V1,
 			purpose: LOCAL,
 		},
+		"v2.local.driRNhM20GQPvlWfJCepzh6HdijAq-yNUtKpdy5KXjKfpSKrOlqQvQ": {
+			version: V2,
+			purpose: LOCAL,
+		},
 		"v1.public.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYYTojmVaYumJSQt8aggtCaFKWyaodw5k-CUWhYKATopiabAl4OAmTxHCfm2E4NSPvrmMcmi8n-JcZ93HpcxC6rx_ps22vutv7iP7wf8QcSD1Mwx.Q3VvbiBBbHBpbnVh": {
 			version: V1,
 			purpose: PUBLIC,
@@ -102,6 +120,9 @@ func TestGetTokenInfo(t *testing.T) {
 		},
 		"v1.private.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYYTojmVaYumJSQt8aggtCaFKWyaodw5k-CUWhYKATopiabAl4OAmTxHCfm2E4NSPvrmMcmi8n-JcZ93HpcxC6rx_ps22vutv7iP7wf8QcSD1Mwx.Q3VvbiBBbHBpbnVh": {
 			err: ErrUnsupportedTokenType,
+		},
+		"v1.private": {
+			err: ErrIncorrectTokenFormat,
 		},
 	}
 

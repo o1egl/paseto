@@ -14,9 +14,9 @@ import (
 )
 
 const (
-	nonceSize = 32
-	macSize   = 48
-	signSize  = 256
+	nonceSize  = 32
+	macSize    = 48
+	v1SignSize = 256
 )
 
 var headerV1 = []byte("v1.local.")
@@ -82,6 +82,7 @@ func (p *pasetoV1) Encrypt(key []byte, value interface{}, ops ...opsFunc) (strin
 		return "", err
 	}
 
+	preAuthEncode(headerV2, nonce, footer)
 	encryptedPayload := make([]byte, len(payload))
 	cipher.NewCTR(block, nonce[16:]).XORKeyStream(encryptedPayload, payload)
 
@@ -92,32 +93,12 @@ func (p *pasetoV1) Encrypt(key []byte, value interface{}, ops ...opsFunc) (strin
 
 	mac := h.Sum(nil)
 
-	d := make([]byte, 0, len(nonce)+len(encryptedPayload)+len(mac))
-	d = append(d, nonce...)
-	d = append(d, encryptedPayload...)
-	d = append(d, mac...)
+	body := make([]byte, 0, len(nonce)+len(encryptedPayload)+len(mac))
+	body = append(body, nonce...)
+	body = append(body, encryptedPayload...)
+	body = append(body, mac...)
 
-	encodedPayload := make([]byte, tokenEncoder.EncodedLen(len(d)))
-	tokenEncoder.Encode(encodedPayload, d)
-
-	footerLen := 0
-	var encodedFooter []byte
-	if footer != nil {
-		encodedFooter = make([]byte, tokenEncoder.EncodedLen(len(footer)))
-		tokenEncoder.Encode(encodedFooter, footer)
-		footerLen = len(encodedFooter) + 1
-	}
-
-	response := make([]byte, len(headerV1)+len(encodedPayload)+footerLen)
-	offset := 0
-	offset += copy(response[offset:], headerV1)
-	offset += copy(response[offset:], encodedPayload)
-	if encodedFooter != nil {
-		offset += copy(response[offset:], []byte("."))
-		copy(response[offset:], encodedFooter)
-
-	}
-	return string(response), nil
+	return createToken(headerV1, body, footer), nil
 }
 
 // Encrypt implements Protocol.Decrypt
@@ -211,30 +192,9 @@ func (p *pasetoV1) Sign(privateKey crypto.PrivateKey, value interface{}, params 
 		panic(err)
 	}
 
-	data := append(payload, signature...)
+	body := append(payload, signature...)
 
-	encodedPayload := make([]byte, tokenEncoder.EncodedLen(len(data)))
-	tokenEncoder.Encode(encodedPayload, data)
-
-	footerLen := 0
-	var encodedFooter []byte
-	if footer != nil {
-		encodedFooter = make([]byte, tokenEncoder.EncodedLen(len(footer)))
-		tokenEncoder.Encode(encodedFooter, footer)
-		footerLen = len(encodedFooter) + 1
-	}
-
-	response := make([]byte, len(headerV1Public)+len(encodedPayload)+footerLen)
-	offset := 0
-	offset += copy(response[offset:], headerV1Public)
-	offset += copy(response[offset:], encodedPayload)
-	if encodedFooter != nil {
-		offset += copy(response[offset:], []byte("."))
-		copy(response[offset:], encodedFooter)
-
-	}
-
-	return string(response), nil
+	return createToken(headerV1Public, body, footer), nil
 }
 
 // Encrypt implements Protocol.Verify. publicKey should be of type *rsa.PublicKey
@@ -249,12 +209,12 @@ func (p *pasetoV1) Verify(token string, publicKey crypto.PublicKey, value interf
 		return err
 	}
 
-	if len(data) < signSize {
+	if len(data) < v1SignSize {
 		return ErrIncorrectTokenFormat
 	}
 
-	payload := data[:len(data)-signSize]
-	signature := data[len(data)-signSize:]
+	payload := data[:len(data)-v1SignSize]
+	signature := data[len(data)-v1SignSize:]
 
 	var opts rsa.PSSOptions
 	opts.SaltLength = rsa.PSSSaltLengthEqualsHash

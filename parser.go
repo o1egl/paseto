@@ -14,6 +14,8 @@ type Purpose int
 const (
 	// V1 defines protocol version 1
 	V1 = Version("v1")
+	// V2 defines protocol version 1
+	V2 = Version("v2")
 )
 
 const (
@@ -25,6 +27,7 @@ const (
 
 var availableVersions = map[Version]Protocol{
 	V1: NewV1(),
+	V2: NewV2(),
 }
 
 // Parse extracts payload and footer from token. To parse public tokens need to specify v1 and v2 public keys.
@@ -85,6 +88,8 @@ func GetTokenInfo(token string) (Version, Purpose, error) {
 	switch parts[0] {
 	case string(V1):
 		version = V1
+	case string(V2):
+		version = V2
 	default:
 		return "", 0, ErrUnsupportedTokenVersion
 	}
