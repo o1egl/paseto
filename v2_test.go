@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"crypto"
+
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/ed25519"
 )
@@ -127,5 +129,126 @@ func TestPasetoV2_Sign_Compatibility(t *testing.T) {
 		if genToken, err := v2.Sign(privateKey, c.payload, WithFooter(c.footer)); assert.NoError(t, err) {
 			assert.Equal(t, token, genToken)
 		}
+	}
+}
+
+func TestPasetoV2_EncryptDecrypt(t *testing.T) {
+	testEncryptDecrypt(t, NewV2())
+}
+
+func TestPasetoV2_SignVerify(t *testing.T) {
+	b, _ := hex.DecodeString("b4cbfb43df4ce210727d953e4a713307fa19bb7d9f85041438d9e11b942a37741eb9dbbbbc047c03fd70604e0071f0987e16b28b757225c11f00415d0e20b1a2")
+	privateKey := ed25519.PrivateKey(b)
+
+	b, _ = hex.DecodeString("1eb9dbbbbc047c03fd70604e0071f0987e16b28b757225c11f00415d0e20b1a2")
+	publicKey := ed25519.PublicKey(b)
+
+	testSign(t, NewV2(), privateKey, publicKey)
+}
+
+func TestPasetoV2_Verify_Error(t *testing.T) {
+	b, _ := hex.DecodeString("1eb9dbbbbc047c03fd70604e0071f0987e16b28b757225c11f00415d0e20b1a2")
+	publicKey := ed25519.PublicKey(b)
+	v2 := NewV2()
+
+	token := "v2.public.RnJhbmsgRGVuaXMgcm9ja3O7MPuu90WKNyvBUUhAGFmi4PiPOr2bN2ytUSU-QWlj8eNefki2MubssfN1b8figynnY0WusRPwIQ-o0HSZOS0F.Q3VvbiBBbHBpbnVz"
+
+	{
+		payload := TestPerson{}
+		assert.EqualError(t, v2.Verify(token, publicKey, payload, nil), ErrDataUnmarshal.Error())
+	}
+	{
+		footer := TestPerson{}
+		assert.EqualError(t, v2.Verify(token, publicKey, nil, &footer), ErrDataUnmarshal.Error())
+	}
+
+	{
+		payload := ""
+		footer := ""
+		assert.EqualError(t, v2.Verify("v2.public.eyJOYW1lIjoiSm9obiIsIkF", publicKey, &payload, footer), ErrIncorrectTokenFormat.Error())
+	}
+
+	{
+		payload := ""
+		footer := ""
+		assert.EqualError(t, v2.Verify("v2.public.eyJOYW1lIj.oiSm9o.biIsIkF", publicKey, &payload, footer), ErrIncorrectTokenFormat.Error())
+	}
+
+	{
+		assert.EqualError(t, v2.Verify("v2.public.eyJOYW1lIj.oiSm9o.biIsIkF", "hello", nil, nil), ErrIncorrectPublicKeyType.Error())
+	}
+
+	{
+		assert.EqualError(t, v2.Verify("v2.public.RnJhbmsgRGVuaXMgcm9ja3O7MPuu90WKNyvBUUhAGFmi4PiPOr2bN2ytUSU-QWlj8eNefki2MubssfN1b8figynnY0WusRPwIQ-o0HSZOS0F", publicKey, nil, nil), ErrInvalidSignature.Error())
+	}
+
+}
+
+func TestPasetoV2_Decrypt_Error(t *testing.T) {
+	symmetricKey, _ := hex.DecodeString("707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f")
+	v2 := NewV2()
+
+	{
+		token := "v2.local.FGVEQLywggpvH0AzKtLXz0QRmGYuC6yvl05z9GIX0cnol6UK94cfV77AXnShlUcNgpDR12FrQiurS8jxBRmvoIKmeMWC5wY9Y6w.Q3VvbiBBbHBpbnVz"
+		var payload struct{}
+		var footer []byte
+		assert.EqualError(t, v2.Decrypt(token, symmetricKey, payload, &footer), ErrDataUnmarshal.Error())
+	}
+	{
+		token := "v2.local.FGVEQLywggpvH0AzKtLXz0QRmGYuC6yvl05z9GIX0cnol6UK94cfV77AXnShlUcNgpDR12FrQiurS8jxBRmvoIKmeMWC5wY9Y6w.Q3VvbiBBbHBpbnVz"
+		var payload []byte
+		var footer struct{}
+		assert.EqualError(t, v2.Decrypt(token, symmetricKey, &payload, &footer), ErrDataUnmarshal.Error())
+	}
+	{
+		token := "v2.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYYTojmVaYumJSQt8aggtCaFKWyaodw5k-CUWhYKATopiabAl4OAmTxHCfm2E4NSPvrmMcmi8n-JcZ93HpcxC6rx_ps22vutv7iP7wf8QcSD1Mwy.Q3VvbiBBbHBpbnVz"
+		var payload []byte
+		var footer []byte
+		assert.EqualError(t, v2.Decrypt(token, symmetricKey, &payload, &footer), ErrInvalidTokenAuth.Error())
+	}
+	{
+		token := "v2.test.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYYTojmVaYumJSQt8aggtCaFKWyaodw5k-CUWhYKATopiabAl4OAmTxHCfm2E4NSPvrmMcmi8n-JcZ93HpcxC6rx_ps22vutv7iP7wf8QcSD1Mwy.Q3VvbiBBbHBpbnVz"
+		var payload []byte
+		var footer []byte
+		assert.EqualError(t, v2.Decrypt(token, symmetricKey, &payload, &footer), ErrIncorrectTokenHeader.Error())
+	}
+	{
+		token := "v2.local.rElw-WywOu.SD1Mwy.Q3VvbiBBbHBpbnVz"
+		var payload []byte
+		var footer []byte
+		assert.EqualError(t, v2.Decrypt(token, symmetricKey, &payload, &footer), ErrIncorrectTokenFormat.Error())
+	}
+	{
+		token := "v2.local.vadkjCfBwRua_Sj-RVw.Q3VvbiBBbHBpbnVz"
+		var payload []byte
+		var footer []byte
+		assert.EqualError(t, v2.Decrypt(token, symmetricKey, &payload, &footer), ErrIncorrectTokenFormat.Error())
+	}
+	{
+		token := "v2.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTn.Q3VvbiBBbHBpbnVz"
+		var payload []byte
+		var footer []byte
+		assert.EqualError(t, v2.Decrypt(token, symmetricKey, &payload, &footer), ErrInvalidTokenAuth.Error())
+	}
+}
+
+func TestPasetoV2_Sign_Error(t *testing.T) {
+	v2 := NewV2()
+
+	cases := []struct {
+		key     crypto.PrivateKey
+		payload interface{}
+		footer  interface{}
+		err     error
+	}{
+		{
+			key: "incorrect",
+			err: ErrIncorrectPrivateKeyType,
+		},
+	}
+
+	for _, c := range cases {
+		_, err := v2.Sign(c.key, c.payload, WithFooter(c.footer))
+		assert.EqualError(t, err, c.err.Error())
 	}
 }

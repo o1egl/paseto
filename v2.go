@@ -101,7 +101,7 @@ func (*pasetoV2) Decrypt(token string, key []byte, payload interface{}, footer i
 
 	decryptedPayload, err := aead.Open(encryptedPayload[:0], nonce, encryptedPayload, preAuthEncode(headerV2, nonce, footerBytes))
 	if err != nil {
-		return err
+		return ErrInvalidTokenAuth
 	}
 
 	if payload != nil {
@@ -122,7 +122,7 @@ func (*pasetoV2) Decrypt(token string, key []byte, payload interface{}, footer i
 func (*pasetoV2) Sign(privateKey crypto.PrivateKey, value interface{}, params ...opsFunc) (string, error) {
 	priv, ok := privateKey.(ed25519.PrivateKey)
 	if !ok {
-		return "", ErrIncorrectPrivateKey
+		return "", ErrIncorrectPrivateKeyType
 	}
 
 	ops := options{}
@@ -155,7 +155,7 @@ func (*pasetoV2) Sign(privateKey crypto.PrivateKey, value interface{}, params ..
 func (*pasetoV2) Verify(token string, publicKey crypto.PublicKey, value interface{}, footer interface{}) error {
 	pub, ok := publicKey.(ed25519.PublicKey)
 	if !ok {
-		return ErrIncorrectPublicKey
+		return ErrIncorrectPublicKeyType
 	}
 
 	data, footerBytes, err := splitToken([]byte(token), headerV2Public)

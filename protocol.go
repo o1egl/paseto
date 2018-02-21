@@ -10,20 +10,22 @@ var (
 	ErrUnsupportedTokenVersion = errors.New("unsupported parser version")
 	// ErrUnsupportedTokenType unsupported token type
 	ErrUnsupportedTokenType = errors.New("unsupported token type")
-	// ErrIncorrectPrivateKey incorrect private key
-	ErrIncorrectPrivateKey = errors.New("incorrect private key")
-	// ErrIncorrectPublicKey incorrect public key
-	ErrIncorrectPublicKey = errors.New("incorrect public key")
+	// ErrIncorrectPrivateKeyType incorrect private key type
+	ErrIncorrectPrivateKeyType = errors.New("incorrect private key type")
+	// ErrIncorrectPublicKeyType incorrect public key type
+	ErrIncorrectPublicKeyType = errors.New("incorrect public key type")
 	// ErrPublicKeyNotFound public key for this version not found
 	ErrPublicKeyNotFound = errors.New("public key for this version not found")
-	// ErrIncorrectTokenFormat incorrect parser format
-	ErrIncorrectTokenFormat = errors.New("incorrect parser format")
-	// ErrIncorrectTokenHeader incorrect parser header
-	ErrIncorrectTokenHeader = errors.New("incorrect parser header")
-	// ErrInvalidMAC invalid MAC
-	ErrInvalidMAC = errors.New("invalid MAC")
+	// ErrIncorrectTokenFormat incorrect token format
+	ErrIncorrectTokenFormat = errors.New("incorrect token format")
+	// ErrIncorrectTokenHeader incorrect token header
+	ErrIncorrectTokenHeader = errors.New("incorrect token header")
+	// ErrInvalidTokenAuth invalid token authentication
+	ErrInvalidTokenAuth = errors.New("invalid token authentication")
 	// ErrInvalidSignature invalid signature
 	ErrInvalidSignature = errors.New("invalid signature")
+	// ErrDataUnmarshal can't unmarshal token data to the given type of value
+	ErrDataUnmarshal = errors.New("can't unmarshal token data to the given type of value")
 )
 
 type opsFunc func(ops *options)

@@ -127,7 +127,7 @@ func (p *pasetoV1) Decrypt(token string, key []byte, value interface{}, footer i
 	}
 
 	if !hmac.Equal(h.Sum(nil), mac) {
-		return ErrInvalidMAC
+		return ErrInvalidTokenAuth
 	}
 
 	block, err := aes.NewCipher(encKey)
@@ -156,7 +156,7 @@ func (p *pasetoV1) Decrypt(token string, key []byte, value interface{}, footer i
 func (p *pasetoV1) Sign(privateKey crypto.PrivateKey, value interface{}, params ...opsFunc) (string, error) {
 	rsaPrivateKey, ok := privateKey.(*rsa.PrivateKey)
 	if !ok {
-		return "", ErrIncorrectPrivateKey
+		return "", ErrIncorrectPrivateKeyType
 	}
 	ops := options{}
 	for _, op := range params {
@@ -201,7 +201,7 @@ func (p *pasetoV1) Sign(privateKey crypto.PrivateKey, value interface{}, params 
 func (p *pasetoV1) Verify(token string, publicKey crypto.PublicKey, value interface{}, footer interface{}) error {
 	rsaPublicKey, ok := publicKey.(*rsa.PublicKey)
 	if !ok {
-		return ErrIncorrectPublicKey
+		return ErrIncorrectPublicKeyType
 	}
 
 	data, footerBytes, err := splitToken([]byte(token), headerV1Public)

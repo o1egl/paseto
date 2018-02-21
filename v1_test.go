@@ -8,6 +8,8 @@ import (
 	"encoding/pem"
 	"testing"
 
+	"crypto"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -266,58 +268,8 @@ func TestPasetoV1_Decrypt_Compatibility(t *testing.T) {
 	}
 }
 
-func TestPasetoV1_EncryptDecript(t *testing.T) {
-	type Case struct {
-		payload         interface{}
-		footer          interface{}
-		obtainedPayload interface{}
-		obtainedFooter  interface{}
-	}
-
-	key, _ := hex.DecodeString("707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f")
-
-	cases := []Case{
-		{
-			payload:         &TestPerson{Name: "John", Age: 30},
-			footer:          &TestPerson{Name: "Antony", Age: 60},
-			obtainedPayload: &TestPerson{},
-			obtainedFooter:  &TestPerson{},
-		},
-		{
-			payload:         sPtr("payload"),
-			footer:          sPtr("footer"),
-			obtainedPayload: sPtr(""),
-			obtainedFooter:  sPtr(""),
-		},
-		{
-			payload:         baPtr([]byte("payload")),
-			footer:          baPtr([]byte("footer")),
-			obtainedPayload: baPtr([]byte("")),
-			obtainedFooter:  baPtr([]byte("")),
-		},
-	}
-
-	pV1 := NewV1()
-
-	for _, c := range cases {
-		if token, err := pV1.Encrypt(key, c.payload, WithFooter(c.footer)); assert.NoError(t, err) {
-			if err := pV1.Decrypt(token, key, c.obtainedPayload, c.obtainedFooter); assert.NoError(t, err) {
-				assert.Equal(t, c.payload, c.obtainedPayload)
-				assert.EqualValues(t, c.footer, c.obtainedFooter)
-			}
-		}
-	}
-
-	payload := "payload"
-	footer := "footer"
-	if token, err := pV1.Encrypt(key, payload, WithFooter(footer)); assert.NoError(t, err) {
-		var obtainedPayload string
-		var obtainedFooter string
-		if err := pV1.Decrypt(token, key, &obtainedPayload, &obtainedFooter); assert.NoError(t, err) {
-			assert.Equal(t, payload, obtainedPayload)
-			assert.EqualValues(t, footer, obtainedFooter)
-		}
-	}
+func TestPasetoV1_EncryptDecrypt(t *testing.T) {
+	testEncryptDecrypt(t, NewV1())
 }
 
 func TestPasetoV1_Decrypt_Error(t *testing.T) {
@@ -328,19 +280,19 @@ func TestPasetoV1_Decrypt_Error(t *testing.T) {
 		token := "v1.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYYTojmVaYumJSQt8aggtCaFKWyaodw5k-CUWhYKATopiabAl4OAmTxHCfm2E4NSPvrmMcmi8n-JcZ93HpcxC6rx_ps22vutv7iP7wf8QcSD1Mwx.Q3VvbiBBbHBpbnVz"
 		var payload struct{}
 		var footer []byte
-		assert.EqualError(t, pV1.Decrypt(token, symmetricKey, payload, &footer), "invalid character 'L' looking for beginning of value")
+		assert.EqualError(t, pV1.Decrypt(token, symmetricKey, payload, &footer), ErrDataUnmarshal.Error())
 	}
 	{
 		token := "v1.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYYTojmVaYumJSQt8aggtCaFKWyaodw5k-CUWhYKATopiabAl4OAmTxHCfm2E4NSPvrmMcmi8n-JcZ93HpcxC6rx_ps22vutv7iP7wf8QcSD1Mwx.Q3VvbiBBbHBpbnVz"
 		var payload []byte
 		var footer struct{}
-		assert.EqualError(t, pV1.Decrypt(token, symmetricKey, &payload, &footer), "invalid character 'C' looking for beginning of value")
+		assert.EqualError(t, pV1.Decrypt(token, symmetricKey, &payload, &footer), ErrDataUnmarshal.Error())
 	}
 	{
 		token := "v1.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYYTojmVaYumJSQt8aggtCaFKWyaodw5k-CUWhYKATopiabAl4OAmTxHCfm2E4NSPvrmMcmi8n-JcZ93HpcxC6rx_ps22vutv7iP7wf8QcSD1Mwy.Q3VvbiBBbHBpbnVz"
 		var payload []byte
 		var footer []byte
-		assert.EqualError(t, pV1.Decrypt(token, symmetricKey, &payload, &footer), ErrInvalidMAC.Error())
+		assert.EqualError(t, pV1.Decrypt(token, symmetricKey, &payload, &footer), ErrInvalidTokenAuth.Error())
 	}
 	{
 		token := "v1.test.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYYTojmVaYumJSQt8aggtCaFKWyaodw5k-CUWhYKATopiabAl4OAmTxHCfm2E4NSPvrmMcmi8n-JcZ93HpcxC6rx_ps22vutv7iP7wf8QcSD1Mwy.Q3VvbiBBbHBpbnVz"
@@ -363,54 +315,30 @@ func TestPasetoV1_Decrypt_Error(t *testing.T) {
 
 }
 
-func sPtr(v string) *string {
-	return &v
+func TestPasetoV1_SignVerify(t *testing.T) {
+	testSign(t, NewV1(), rsaPrivateKey, rsaPublicKey)
+
 }
 
-func baPtr(v []byte) *[]byte {
-	return &v
-}
+func TestPasetoV1_Sign_Error(t *testing.T) {
+	v1 := NewV1()
 
-func TestPasetoV1_Sign(t *testing.T) {
-
-	pV1 := NewV1()
-
-	{
-		payload := []byte("Lorem Ipsum")
-		if token, err := pV1.Sign(rsaPrivateKey, payload); assert.NoError(t, err) {
-			var obtainedPayload []byte
-			if assert.NoError(t, pV1.Verify(token, rsaPublicKey, &obtainedPayload, nil)) {
-				assert.Equal(t, payload, obtainedPayload)
-			}
-		}
+	cases := []struct {
+		key     crypto.PrivateKey
+		payload interface{}
+		footer  interface{}
+		err     error
+	}{
+		{
+			key: "incorrect",
+			err: ErrIncorrectPrivateKeyType,
+		},
 	}
 
-	{
-		payload := []byte("Lorem Ipsum")
-		footer := []byte("footer")
-		if token, err := pV1.Sign(rsaPrivateKey, payload, WithFooter(footer)); assert.NoError(t, err) {
-			var obtainedPayload []byte
-			var obtainedFooter []byte
-			if assert.NoError(t, pV1.Verify(token, rsaPublicKey, &obtainedPayload, &obtainedFooter)) {
-				assert.Equal(t, payload, obtainedPayload)
-				assert.Equal(t, footer, obtainedFooter)
-			}
-		}
+	for _, c := range cases {
+		_, err := v1.Sign(c.key, c.payload, WithFooter(c.footer))
+		assert.EqualError(t, err, c.err.Error())
 	}
-
-	{
-		payload := TestPerson{Name: "John", Age: 30}
-		footer := TestPerson{Name: "Antony", Age: 60}
-		if token, err := pV1.Sign(rsaPrivateKey, &payload, WithFooter(&footer)); assert.NoError(t, err) {
-			var obtainedPayload TestPerson
-			var obtainedFooter TestPerson
-			if assert.NoError(t, pV1.Verify(token, rsaPublicKey, &obtainedPayload, &obtainedFooter)) {
-				assert.Equal(t, payload, obtainedPayload)
-				assert.Equal(t, footer, obtainedFooter)
-			}
-		}
-	}
-
 }
 
 func TestPasetoV1_Verify_Error(t *testing.T) {
@@ -420,12 +348,12 @@ func TestPasetoV1_Verify_Error(t *testing.T) {
 	{
 		payload := TestPerson{}
 		footer := TestPerson{}
-		assert.EqualError(t, pV1.Verify(token, rsaPublicKey, payload, &footer), "json: Unmarshal(non-pointer paseto.TestPerson)")
+		assert.EqualError(t, pV1.Verify(token, rsaPublicKey, payload, &footer), ErrDataUnmarshal.Error())
 	}
 	{
 		payload := TestPerson{}
 		footer := TestPerson{}
-		assert.EqualError(t, pV1.Verify(token, rsaPublicKey, &payload, footer), "json: Unmarshal(non-pointer paseto.TestPerson)")
+		assert.EqualError(t, pV1.Verify(token, rsaPublicKey, &payload, footer), ErrDataUnmarshal.Error())
 	}
 
 	{

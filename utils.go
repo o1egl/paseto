@@ -109,7 +109,7 @@ func fillValue(data []byte, i interface{}) error {
 		*f = append(*f, data...)
 	default:
 		if err := json.Unmarshal(data, i); err != nil {
-			return err
+			return ErrDataUnmarshal
 		}
 	}
 	return nil
