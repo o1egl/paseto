@@ -9,9 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func testEncryptDecrypt(t *testing.T, impl Protocol) {
-	t.Helper()
-
+func _testEncryptDecrypt(t *testing.T, impl Protocol) {
 	type Case struct {
 		payload         interface{}
 		footer          interface{}
@@ -63,8 +61,7 @@ func testEncryptDecrypt(t *testing.T, impl Protocol) {
 	}
 }
 
-func testSign(t *testing.T, impl Protocol, privateKey crypto.PrivateKey, publicKey crypto.PublicKey) {
-	t.Helper()
+func _testSign(t *testing.T, impl Protocol, privateKey crypto.PrivateKey, publicKey crypto.PublicKey) {
 	{
 		payload := []byte("Lorem Ipsum")
 		if token, err := impl.Sign(privateKey, payload); assert.NoError(t, err) {

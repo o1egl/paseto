@@ -2,6 +2,7 @@ language: go
 go:
     - 1.8.x
     - 1.9.x
+    - 1.10.x
     - tip
 before_install:
     - export PATH=$PATH:$GOPATH/bin
@@ -14,7 +15,7 @@ install:
     - dep ensure
 script:
     - diff -u <(echo -n) <(gofmt -d -s $(find . -type f -name '*.go' -not -path "./vendor/*"))
-    - go vet ./...
+    - go vet $(go list ./... | grep -v /vendor/)
     - golint -set_exit_status
     - go test -coverprofile=parser.coverprofile
     - gover
