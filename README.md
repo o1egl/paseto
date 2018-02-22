@@ -1,11 +1,11 @@
-# PASETO: Platform-Agnostic Security Tokens (GO implementation)
+# PASETO: Platform-Agnostic Security Tokens (Golang implementation)
 [![License](http://img.shields.io/:license-mit-blue.svg)](LICENSE)
 [![GoDoc](https://godoc.org/github.com/o1egl/paseto?status.svg)](https://godoc.org/github.com/o1egl/paseto)
 [![Build Status](http://img.shields.io/travis/o1egl/paseto.svg?style=flat-square)](https://travis-ci.org/o1egl/paseto)
 [![Coverage Status](http://img.shields.io/coveralls/o1egl/paseto.svg?style=flat-square)](https://coveralls.io/r/o1egl/paseto)
 [![Go Report Card](https://goreportcard.com/badge/github.com/o1egl/paseto)](https://goreportcard.com/report/github.com/o1egl/paseto)
 
-This is fully compatible GO implementation of [PASETO](https://github.com/paragonie/paseto) library.
+This is 100% compatible Golang implementation of [PASETO](https://github.com/paragonie/paseto) library.
 
 Paseto is everything you love about JOSE (JWT, JWE, JWS) without any of the
 [many design deficits that plague the JOSE standards](https://paragonie.com/blog/2017/03/jwt-json-web-tokens-is-bad-standard-that-everyone-should-avoid).
