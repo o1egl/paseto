@@ -1,14 +1,21 @@
-# PASETO: Platform-Agnostic Security Tokens (Golang implementation)
+# Golang implementation of PASETO: Platform-Agnostic Security Tokens
 [![License](http://img.shields.io/:license-mit-blue.svg)](LICENSE)
 [![GoDoc](https://godoc.org/github.com/o1egl/paseto?status.svg)](https://godoc.org/github.com/o1egl/paseto)
 [![Build Status](http://img.shields.io/travis/o1egl/paseto.svg?style=flat-square)](https://travis-ci.org/o1egl/paseto)
 [![Coverage Status](http://img.shields.io/coveralls/o1egl/paseto.svg?style=flat-square)](https://coveralls.io/r/o1egl/paseto)
 [![Go Report Card](https://goreportcard.com/badge/github.com/o1egl/paseto)](https://goreportcard.com/report/github.com/o1egl/paseto)
 
-This is 100% compatible Golang implementation of [PASETO](https://github.com/paragonie/paseto) library.
+This is 100% compatible pure GO (Golang) implementation of [PASETO](https://github.com/paragonie/paseto) library.
 
 Paseto is everything you love about JOSE (JWT, JWE, JWS) without any of the
 [many design deficits that plague the JOSE standards](https://paragonie.com/blog/2017/03/jwt-json-web-tokens-is-bad-standard-that-everyone-should-avoid).
+
+# Contents
+* [What is Paseto?](#what-is-paseto)
+  * [Key Differences between Paseto and JWT](#key-differences-between-paseto-and-jwt)
+* [Installation](#installation)
+* [Usage](#usage)
+* [Supported Paseto Versions](#supported-paseto-versions)
 
 # What is Paseto?
 
@@ -27,115 +34,97 @@ use Paseto in [an insecure way](https://auth0.com/blog/critical-vulnerabilities-
 > Paseto is suitable for tamper-proof cookies, but cannot prevent replay attacks
 > by itself.
 
-### Paseto
+# Installation
 
-#### Paseto Example 1
-
-```
-v2.local.lClhzVOuseCWYep44qbA8rmXry66lUupyENijX37_I_z34EiOlfyuwqIIhOjF-e9m2J-Qs17Gs-BpjpLlh3zf-J37n7YGHqMBV6G5xD2aeIKpck6rhfwHpGF38L7ryYuzuUeqmPg8XozSfU4PuPp9o8.UGFyYWdvbiBJbml0aWF0aXZlIEVudGVycHJpc2Vz
-```
-
-This decodes to:
-
-* Version: `v2`
-* Purpose: `local` (shared-key authenticated encryption)
-* Payload (hex-encoded):
-  ```
-  942961cd53aeb1e09661ea78e2a6c0f2b997af2eba954ba9c843628d7dfbfc8f
-  f3df81223a57f2bb0a882213a317e7bd9b627e42cd7b1acf81a63a4b961df37f
-  e277ee7ed8187a8c055e86e710f669e20aa5c93aae17f01e9185dfc2fbaf262e
-  cee51eaa63e0f17a3349f5383ee3e9f68f
-  ```
-  * Nonce: `942961cd53aeb1e09661ea78e2a6c0f2b997af2eba954ba9`
-  * Authentication tag: `e51eaa63e0f17a3349f5383ee3e9f68f`
-* Decrypted Payload:
-  ```json
-  {
-    "data": "this is a signed message",
-    "exp": "2039-01-01T00:00:00+00:00"
-  }
-  ```
-  * Key used in this example (hex-encoded):
-    ```
-    707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f  
-    ``` 
-* Footer:
-  ```
-  Paragon Initiative Enterprises
-  ```
-
-#### Paseto Example 2
+To install the library use the following command:
 
 ```
-v2.public.eyJkYXRhIjoidGhpcyBpcyBhIHNpZ25lZCBtZXNzYWdlIiwiZXhwaXJlcyI6IjIwMTktMDEtMDFUMDA6MDA6MDArMDA6MDAifcMYjoUaEYXAtzTDwlcOlxdcZWIZp8qZga3jFS8JwdEjEvurZhs6AmTU3bRW5pB9fOQwm43rzmibZXcAkQ4AzQs.UGFyYWdvbiBJbml0aWF0aXZlIEVudGVycHJpc2Vz
+$ go get -u github.com/o1egl/paseto
 ```
 
-This decodes to:
+# Usage
+This library contains predefined JsonToken struct for using as payload but you are free to use any data types and structs you want.
+During encoding process payload of type string and []byte is used without transformation. For other data types library tries to encode payload to json.
 
-* Version: `v2`
-* Purpose: `public` (public-key digital signature)
-* Payload:
-  ```json
-  {
-    "data": "this is a signed message",
-    "exp": "2039-01-01T00:00:00+00:00"
-  }
-  ```
-* Signature (hex-encoded):
-  ```
-  70c623a1468461702dcd30f095c3a5c5d719588669f2a6606b78c54bc2707448
-  c4beead986ce809935376d15b9a41f5f390c26e37af39a26d95dc02443803342
-  ```
+Use general parser to parse all supported token versions:
+```go
+b, err := hex.DecodeString("2d2d2d2d2d424547494e205055424c4943204b45592d2d2d2d2d0d0a4d494942496a414e42676b71686b6947397730424151454641414f43415138414d49494243674b43415145417878636e47724e4f6136426c41523458707050640d0a746146576946386f7279746c4b534d6a66446831314c687956627a4335416967556b706a457274394d7649482f46384d444a72324f39486b36594b454b574b6f0d0a72333566364b6853303679357a714f722b7a4e34312b39626a52365633322b527345776d5a737a3038375258764e41334e687242633264593647736e57336c5a0d0a34356f5341564a755639553667335a334a574138355972362b6350776134793755632f56726f6d7a674679627355656e33476f724254626a783142384f514a440d0a73652f4b6b6855433655693358384264514f473974523455454775742f6c39703970732b3661474d4c57694357495a54615456784d4f75653133596b777038740d0a3148467635747a6872493055635948687638464a6b315a6435386759464158634e797975737834346e6a6152594b595948646e6b4f6a486e33416b534c4d306b0d0a6c774944415141420d0a2d2d2d2d2d454e44205055424c4943204b45592d2d2d2d2d")
+block, _ = pem.Decode(b)
+rsaPubInterface, err := x509.ParsePKIXPublicKey(block.Bytes)
+v1PublicKey := rsaPubInterface.(*rsa.PublicKey)
 
-To learn what each version means, please see [this page in the documentation](https://github.com/paragonie/paseto/tree/master/docs/01-Protocol-Versions).
+b, _ = hex.DecodeString("1eb9dbbbbc047c03fd70604e0071f0987e16b28b757225c11f00415d0e20b1a2")
+v2PublicKey := ed25519.PublicKey(b)
 
-### JWT
 
-An example JWT ([taken from JWT.io](https://jwt.io)) might look like this:
-
-```
-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiYWRtaW4iOnRydWV9.TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ 
+var payload JsonToken
+var footer string
+version, err := Parse(token, &payload, &footer, symmetricKey, map[Version]crypto.PublicKey{V1: v1PublicKey, V2: v2PublicKey})
 ```
 
-This decodes to:
+Create token using symmetric key (local mode): 
+```go
+symmetricKey := []byte("YELLOW SUBMARINE, BLACK WIZARDRY")
+now := time.Now()
+exp := now.Add(24 * time.Hour)
+nbt := now
 
-**Header**:
-```json
-{
-  "alg": "HS256",
-  "typ": "JWT"
-}
+jsonToken := JsonToken{
+		Audience:   "test",
+		Issuer:     "test_service",
+		Jti:        "123",
+		Subject:    "test_subject",
+		IssuedAt:   now,
+		Expiration: exp,
+		NotBefore:  nbt,
+		}
+// Add custom claim	to the token	
+jsonToken.Set("data", "this is a signed message")
+footer := "some footer"
+
+v2 := NewV2()
+
+// Encrypt data
+token, err := v2.Encrypt(symmetricKey, jsonToken, WithFooter(footer))
+// token = "v2.local.E42A2iMY9SaZVzt-WkCi45_aebky4vbSUJsfG45OcanamwXwieieMjSjUkgsyZzlbYt82miN1xD-X0zEIhLK_RhWUPLZc9nC0shmkkkHS5Exj2zTpdNWhrC5KJRyUrI0cupc5qrctuREFLAvdCgwZBjh1QSgBX74V631fzl1IErGBgnt2LV1aij5W3hw9cXv4gtm_jSwsfee9HZcCE0sgUgAvklJCDO__8v_fTY7i_Regp5ZPa7h0X0m3yf0n4OXY9PRplunUpD9uEsXJ_MTF5gSFR3qE29eCHbJtRt0FFl81x-GCsQ9H9701TzEjGehCC6Bhw.c29tZSBmb290ZXI"
+
+// Decrypt data
+var newJsonToken JsonToken
+var newFooter string
+err := v2.Decrypt(token, symmetricKey, &newJsonToken, WithFooter(&newFooter))
 ```
 
-**Body**:
-```json
-{
-  "sub": "1234567890",
-  "name": "John Doe",
-  "admin": true
-}
+Create token using asymetric key (public mode): 
+```go
+b, _ := hex.DecodeString("b4cbfb43df4ce210727d953e4a713307fa19bb7d9f85041438d9e11b942a37741eb9dbbbbc047c03fd70604e0071f0987e16b28b757225c11f00415d0e20b1a2")
+privateKey := ed25519.PrivateKey(b)
+
+b, _ = hex.DecodeString("1eb9dbbbbc047c03fd70604e0071f0987e16b28b757225c11f00415d0e20b1a2")
+publicKey := ed25519.PublicKey(b)
+
+jsonToken := JsonToken{
+		Expiration: time.Now().Add(24 * time.Hour),
+		}
+		
+// Add custom claim	to the token	
+jsonToken.Set("data", "this is a signed message")
+footer := "some footer"
+
+v2 := NewV2()
+
+// Sign data
+token, err := v2.Sign(privateKey, jsonToken, WithFooter(footer))
+// token = "v2.public.eyJkYXRhIjoidGhpcyBpcyBhIHNpZ25lZCBtZXNzYWdlIiwiZXhwIjoiMjAxOC0wMy0xMlQxOTowODo1NCswMTowMCJ9Ojv0uXlUNXSFhR88KXb568LheLRdeGy2oILR3uyOM_-b7r7i_fX8aljFYUiF-MRr5IRHMBcWPtM0fmn9SOd6Aw.c29tZSBmb290ZXI"
+
+// Verify data
+var newJsonToken JsonToken
+var newFooter string
+err := v2.Verify(token, publicKey, &newJsonToken, WithFooter(&newFooter))
 ```
 
-**Signature**:  
-```
-TJVA95OrM7E2cBab30RMHrHDcEfxjoYZgeFONFh7HgQ
-```
+# Supported Paseto Versions
+## Version 2
+Version 2 (the recommended version by the specification) is fully supported.
 
-## Motivation 
-
-As you can see, with JWT, you get to specify an `alg` header. There are a lot of options to
-choose from (including `none`).
-
-There have been ways to exploit JWT libraries by replacing RS256 with HS256 and using
-the known public key as the HMAC-SHA256 key, thereby allowing arbitrary token forgery. 
-
-With Paseto, your options are `version` and a `purpose`. There are two possible
-values for `purpose`:
-
-* `local` -- shared-key authenticated encrypted
-* `public` -- public-key authentication (a.k.a. digital signatures)
-
-Paseto only allows you to use [authenticated modes](https://tonyarcieri.com/all-the-crypto-code-youve-ever-written-is-probably-broken).
-
-Regardless of the purpose selected, the header (and an optional footer, which is always
-cleartext but base64url-encoded) is included in the signature or authentication tag.
+## Version 1
+Version 1 (the compatability version) is fully supported.
