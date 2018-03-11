@@ -15,6 +15,7 @@ Paseto is everything you love about JOSE (JWT, JWE, JWS) without any of the
   * [Key Differences between Paseto and JWT](#key-differences-between-paseto-and-jwt)
 * [Installation](#installation)
 * [Usage](#usage)
+* [Benchmarks](#benchmarks)
 * [Supported Paseto Versions](#supported-paseto-versions)
 
 # What is Paseto?
@@ -46,7 +47,7 @@ $ go get -u github.com/o1egl/paseto
 This library contains predefined JsonToken struct for using as payload but you are free to use any data types and structs you want.
 During encoding process payload of type string and []byte is used without transformation. For other data types library tries to encode payload to json.
 
-Use general parser to parse all supported token versions:
+## Use general parser to parse all supported token versions:
 ```go
 b, err := hex.DecodeString("2d2d2d2d2d424547494e205055424c4943204b45592d2d2d2d2d0d0a4d494942496a414e42676b71686b6947397730424151454641414f43415138414d49494243674b43415145417878636e47724e4f6136426c41523458707050640d0a746146576946386f7279746c4b534d6a66446831314c687956627a4335416967556b706a457274394d7649482f46384d444a72324f39486b36594b454b574b6f0d0a72333566364b6853303679357a714f722b7a4e34312b39626a52365633322b527345776d5a737a3038375258764e41334e687242633264593647736e57336c5a0d0a34356f5341564a755639553667335a334a574138355972362b6350776134793755632f56726f6d7a674679627355656e33476f724254626a783142384f514a440d0a73652f4b6b6855433655693358384264514f473974523455454775742f6c39703970732b3661474d4c57694357495a54615456784d4f75653133596b777038740d0a3148467635747a6872493055635948687638464a6b315a6435386759464158634e797975737834346e6a6152594b595948646e6b4f6a486e33416b534c4d306b0d0a6c774944415141420d0a2d2d2d2d2d454e44205055424c4943204b45592d2d2d2d2d")
 block, _ = pem.Decode(b)
@@ -62,7 +63,7 @@ var footer string
 version, err := Parse(token, &payload, &footer, symmetricKey, map[Version]crypto.PublicKey{V1: v1PublicKey, V2: v2PublicKey})
 ```
 
-Create token using symmetric key (local mode): 
+## Create token using symmetric key (local mode): 
 ```go
 symmetricKey := []byte("YELLOW SUBMARINE, BLACK WIZARDRY")
 now := time.Now()
@@ -94,7 +95,7 @@ var newFooter string
 err := v2.Decrypt(token, symmetricKey, &newJsonToken, WithFooter(&newFooter))
 ```
 
-Create token using asymetric key (public mode): 
+## Create token using asymetric key (public mode): 
 ```go
 b, _ := hex.DecodeString("b4cbfb43df4ce210727d953e4a713307fa19bb7d9f85041438d9e11b942a37741eb9dbbbbc047c03fd70604e0071f0987e16b28b757225c11f00415d0e20b1a2")
 privateKey := ed25519.PrivateKey(b)
@@ -120,6 +121,27 @@ token, err := v2.Sign(privateKey, jsonToken, WithFooter(footer))
 var newJsonToken JsonToken
 var newFooter string
 err := v2.Verify(token, publicKey, &newJsonToken, WithFooter(&newFooter))
+```
+
+For more information see *_test.go files.
+
+# Benchmarks
+MacBook Pro (Retina, 15-inch, Late 2013)
+CPU: 2,3 GHz Intel Core i7
+RAM: 16 GB 1600 MHz DDR3
+OS: macOS 10.13.3
+GO: 1.10
+```
+$ go test -bench . -benchmem
+
+Benchmark_V2_JSONToken_Encrypt-8          100000             11729 ns/op            5808 B/op         63 allocs/op
+Benchmark_V2_JSONToken_Decrypt-8          100000             11795 ns/op            3104 B/op         61 allocs/op
+Benchmark_V2_JSONToken_Sign-8              20000             71034 ns/op            5136 B/op         60 allocs/op
+Benchmark_V2_JSONToken_Verify-8            10000            167387 ns/op            2672 B/op         58 allocs/op
+Benchmark_V2_String_Encrypt-8             300000              4295 ns/op            2240 B/op         32 allocs/op
+Benchmark_V2_String_Decrypt-8            1000000              1854 ns/op            1512 B/op         22 allocs/op
+Benchmark_V2_String_Sign-8                 20000             60374 ns/op            1296 B/op         28 allocs/op
+Benchmark_V2_String_Verify-8               10000            156859 ns/op             776 B/op         18 allocs/op
 ```
 
 # Supported Paseto Versions
