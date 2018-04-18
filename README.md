@@ -58,9 +58,9 @@ b, _ = hex.DecodeString("1eb9dbbbbc047c03fd70604e0071f0987e16b28b757225c11f00415
 v2PublicKey := ed25519.PublicKey(b)
 
 
-var payload JsonToken
+var payload JSONToken
 var footer string
-version, err := Parse(token, &payload, &footer, symmetricKey, map[Version]crypto.PublicKey{V1: v1PublicKey, V2: v2PublicKey})
+version, err := paseto.Parse(token, &payload, &footer, symmetricKey, map[Version]crypto.PublicKey{V1: v1PublicKey, V2: v2PublicKey})
 ```
 
 ## Create token using symmetric key (local mode): 
@@ -70,7 +70,7 @@ now := time.Now()
 exp := now.Add(24 * time.Hour)
 nbt := now
 
-jsonToken := JsonToken{
+jsonToken := paseto.JSONToken{
 		Audience:   "test",
 		Issuer:     "test_service",
 		Jti:        "123",
@@ -83,16 +83,16 @@ jsonToken := JsonToken{
 jsonToken.Set("data", "this is a signed message")
 footer := "some footer"
 
-v2 := NewV2()
+v2 := paseto.NewV2()
 
 // Encrypt data
 token, err := v2.Encrypt(symmetricKey, jsonToken, WithFooter(footer))
 // token = "v2.local.E42A2iMY9SaZVzt-WkCi45_aebky4vbSUJsfG45OcanamwXwieieMjSjUkgsyZzlbYt82miN1xD-X0zEIhLK_RhWUPLZc9nC0shmkkkHS5Exj2zTpdNWhrC5KJRyUrI0cupc5qrctuREFLAvdCgwZBjh1QSgBX74V631fzl1IErGBgnt2LV1aij5W3hw9cXv4gtm_jSwsfee9HZcCE0sgUgAvklJCDO__8v_fTY7i_Regp5ZPa7h0X0m3yf0n4OXY9PRplunUpD9uEsXJ_MTF5gSFR3qE29eCHbJtRt0FFl81x-GCsQ9H9701TzEjGehCC6Bhw.c29tZSBmb290ZXI"
 
 // Decrypt data
-var newJsonToken JsonToken
+var newJsonToken paseto.JSONToken
 var newFooter string
-err := v2.Decrypt(token, symmetricKey, &newJsonToken, WithFooter(&newFooter))
+err := v2.Decrypt(token, symmetricKey, &newJsonToken, &newFooter)
 ```
 
 ## Create token using asymetric key (public mode): 
@@ -103,7 +103,10 @@ privateKey := ed25519.PrivateKey(b)
 b, _ = hex.DecodeString("1eb9dbbbbc047c03fd70604e0071f0987e16b28b757225c11f00415d0e20b1a2")
 publicKey := ed25519.PublicKey(b)
 
-jsonToken := JsonToken{
+// or create a new keypair 
+// publicKey, privateKey, err := ed25519.GenerateKey(nil)
+
+jsonToken := paseto.JSONToken{
 		Expiration: time.Now().Add(24 * time.Hour),
 		}
 		
@@ -111,16 +114,16 @@ jsonToken := JsonToken{
 jsonToken.Set("data", "this is a signed message")
 footer := "some footer"
 
-v2 := NewV2()
+v2 := paseto.NewV2()
 
 // Sign data
 token, err := v2.Sign(privateKey, jsonToken, WithFooter(footer))
 // token = "v2.public.eyJkYXRhIjoidGhpcyBpcyBhIHNpZ25lZCBtZXNzYWdlIiwiZXhwIjoiMjAxOC0wMy0xMlQxOTowODo1NCswMTowMCJ9Ojv0uXlUNXSFhR88KXb568LheLRdeGy2oILR3uyOM_-b7r7i_fX8aljFYUiF-MRr5IRHMBcWPtM0fmn9SOd6Aw.c29tZSBmb290ZXI"
 
 // Verify data
-var newJsonToken JsonToken
+var newJsonToken paseto.JSONToken
 var newFooter string
-err := v2.Verify(token, publicKey, &newJsonToken, WithFooter(&newFooter))
+err := v2.Verify(token, publicKey, &newJsonToken, &newFooter)
 ```
 
 For more information see *_test.go files.
