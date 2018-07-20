@@ -6,10 +6,10 @@ import (
 	"time"
 )
 
-// Validator defines JSONToken validator function
+// Validator defines a JSONToken validator function.
 type Validator func(token *JSONToken) error
 
-// ForAudience validates JSONToken audience
+// ForAudience validates that the JSONToken audience has the specified value.
 func ForAudience(audience string) Validator {
 	return func(token *JSONToken) error {
 		if token.Audience != audience {
@@ -19,7 +19,7 @@ func ForAudience(audience string) Validator {
 	}
 }
 
-// IdentifiedBy validates JSONToken JTI
+// IdentifiedBy validates that the JSONToken JTI has the specified value.
 func IdentifiedBy(jti string) Validator {
 	return func(token *JSONToken) error {
 		if token.Jti != jti {
@@ -29,7 +29,7 @@ func IdentifiedBy(jti string) Validator {
 	}
 }
 
-// IssuedBy validates JSONToken issuer
+// IssuedBy validates that the JSONToken issuer has the specified value.
 func IssuedBy(issuer string) Validator {
 	return func(token *JSONToken) error {
 		if token.Issuer != issuer {
@@ -39,7 +39,7 @@ func IssuedBy(issuer string) Validator {
 	}
 }
 
-// Subject validates JSONToken subject
+// Subject validates that the JSONToken subject has the specified value.
 func Subject(subject string) Validator {
 	return func(token *JSONToken) error {
 		if token.Subject != subject {
@@ -49,7 +49,8 @@ func Subject(subject string) Validator {
 	}
 }
 
-// ValidAt validates if token valid at specified time based on IssuedAt, NotBefore and Expiration fields
+// ValidAt validates whether the token is valid at the specified time, based on
+// the values of the  IssuedAt, NotBefore and Expiration claims in the token.
 func ValidAt(t time.Time) Validator {
 	return func(token *JSONToken) error {
 		if !token.IssuedAt.IsZero() && t.Before(token.IssuedAt) {

@@ -5,7 +5,7 @@
 [![Coverage Status](http://img.shields.io/coveralls/o1egl/paseto.svg?style=flat-square)](https://coveralls.io/r/o1egl/paseto)
 [![Go Report Card](https://goreportcard.com/badge/github.com/o1egl/paseto)](https://goreportcard.com/report/github.com/o1egl/paseto)
 
-This is 100% compatible pure GO (Golang) implementation of [PASETO](https://github.com/paragonie/paseto) library.
+This is 100% compatible pure Go (Golang) implementation of [PASETO](https://github.com/paragonie/paseto) library.
 
 Paseto is everything you love about JOSE (JWT, JWE, JWS) without any of the
 [many design deficits that plague the JOSE standards](https://paragonie.com/blog/2017/03/jwt-json-web-tokens-is-bad-standard-that-everyone-should-avoid).
@@ -44,8 +44,9 @@ $ go get -u github.com/o1egl/paseto
 ```
 
 # Usage
-This library contains predefined JsonToken struct for using as payload but you are free to use any data types and structs you want.
-During encoding process payload of type string and []byte is used without transformation. For other data types library tries to encode payload to json.
+This library contains a predefined JsonToken struct for using as payload, but you are free to use any data types and structs you want.
+
+During the encoding process a payload of type string and []byte is used without transformation. For other data types, the library tries to encode the payload to json.
 
 ## Use general parser to parse all supported token versions:
 ```go
@@ -65,7 +66,7 @@ version, err := paseto.Parse(token, &payload, &footer, symmetricKey, map[paseto.
 
 ## Create token using symmetric key (local mode): 
 ```go
-symmetricKey := []byte("YELLOW SUBMARINE, BLACK WIZARDRY")
+symmetricKey := []byte("YELLOW SUBMARINE, BLACK WIZARDRY") // Must be 32 bytes
 now := time.Now()
 exp := now.Add(24 * time.Hour)
 nbt := now

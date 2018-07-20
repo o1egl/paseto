@@ -1,3 +1,5 @@
+// PASETO is a secure alternative to the JOSE standards (JWT, JWE, JWS).
+// See https://paseto.io/
 package paseto
 
 import (
@@ -5,16 +7,16 @@ import (
 	"strings"
 )
 
-// Version defines token version
+// Version defines the token version.
 type Version string
 
-// Purpose defines token type
+// Purpose defines the token type by its intended purpose.
 type Purpose int
 
 const (
 	// V1 defines protocol version 1
 	V1 = Version("v1")
-	// V2 defines protocol version 1
+	// V2 defines protocol version 2
 	V2 = Version("v2")
 )
 
@@ -30,7 +32,11 @@ var availableVersions = map[Version]Protocol{
 	V2: NewV2(),
 }
 
-// Parse extracts payload and footer from token. To parse public tokens need to specify v1 and v2 public keys.
+// Parse extracts the payload and footer from the token by calling either
+// Decrypt() or Verify(), depending on whether the token is public or private.
+// To parse public tokens you need to provide a map containing v1 and/or v2
+// public keys, depending on the version of the token. To parse private tokens
+// you need to provide the symmetric key.
 func Parse(token string, payload interface{}, footer interface{},
 	symmetricKey []byte, publicKeys map[Version]crypto.PublicKey) (Version, error) {
 	parts := strings.Split(token, ".")
@@ -59,7 +65,7 @@ func Parse(token string, payload interface{}, footer interface{},
 	}
 }
 
-// ParseFooter parses footer from token
+// ParseFooter parses the footer from the token and returns it.
 func ParseFooter(token string, footer interface{}) error {
 	parts := strings.Split(token, ".")
 	if len(parts) == 4 {
@@ -75,7 +81,8 @@ func ParseFooter(token string, footer interface{}) error {
 	return nil
 }
 
-// GetTokenInfo returns token version and purpose
+// GetTokenInfo returns the token version (paseto.V1 or paseto.V2) and purpose
+// (paseto.LOCAL or paseto.PUBLIC).
 func GetTokenInfo(token string) (Version, Purpose, error) {
 	parts := strings.Split(token, ".")
 	if len(parts) < 3 {

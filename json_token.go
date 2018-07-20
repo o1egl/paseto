@@ -6,24 +6,40 @@ import (
 	"time"
 )
 
-// JSONToken defines predefined token payload struct
+// JSONToken defines standard token payload claims and allows for additional
+// claims to be added. All of the standard claims are optional.
 type JSONToken struct {
-	Audience   string
-	Issuer     string
-	Jti        string
-	Subject    string
+	// Audience identifies the intended recipients of the token.
+	// It should be a string or a URI and is case sensitive.
+	Audience string
+	// Issuer identifies the entity which issued the token.
+	// It should be a string or a URI and is case sensitive.
+	Issuer string
+	// JTI is a globally unique identifier for the token. It must be created in
+	// such a way as to ensure that there is negligible probability that the same
+	// value will be used in another token.
+	Jti string
+	// Subject identifies the principal entity that is the subject of the token.
+	// For example, for an authentication token, the subject might be the user ID
+	// of a person.
+	Subject string
+	// Expiration is a time on or after which the token must not be accepted for processing.
 	Expiration time.Time
-	IssuedAt   time.Time
-	NotBefore  time.Time
-	claims     map[string]string
+	// IssuedAt is the time at which the token was issued.
+	IssuedAt time.Time
+	// NotBefore is a time on or before which the token must not be accepted for
+	// processing.
+	NotBefore time.Time
+	claims    map[string]string
 }
 
-// Get return custom claim
+// Get returns the value of a custom claim, as a string.
+// If there is no such claim, an empty string is returned.
 func (t *JSONToken) Get(key string) string {
 	return t.claims[key]
 }
 
-// Set sets custom claim
+// Set sets the value of a custom claim to the string value provided.
 func (t *JSONToken) Set(key string, value string) {
 	if t.claims == nil {
 		t.claims = make(map[string]string)
@@ -97,9 +113,10 @@ func (t *JSONToken) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// Validate validates token with given validators.
-// If no validators specified, then by default it validates token with ValidAt(time.Now())
-// which checks IssuedAt, NotBefore and Expiration fields with current time.
+// Validate validates a token with the given validators. If no validators are
+// specified, then by default it validates the token with ValidAt(time.Now()),
+// which checks IssuedAt, NotBefore and Expiration fields against the current
+// time.
 func (t *JSONToken) Validate(validators ...Validator) error {
 	var err error
 	if len(validators) == 0 {

@@ -35,7 +35,8 @@ type options struct {
 	nonce  []byte
 }
 
-// WithFooter adds footer to the token
+// WithFooter adds an optional footer to the token. The footer is always included as plaintext,
+// base64 encoded.
 func WithFooter(footer interface{}) func(*options) {
 	return func(c *options) {
 		c.footer = footer
@@ -48,14 +49,22 @@ func withNonce(nonce []byte) func(*options) {
 	}
 }
 
-// Protocol defines PASETO tokes protocol
+// Protocol defines the PASETO token protocol interface.
 type Protocol interface {
-	// Encrypt encrypts token with symmetric key
+
+	// Encrypt encrypts a token with a symmetric key. The key should be a byte
+	// slice of 32 bytes, regardless of whether PASETO v1 or v2 is being used.
 	Encrypt(key []byte, payload interface{}, options ...opsFunc) (string, error)
-	// Decrypt decrypts key encrypted with symmetric key
+
+	// Decrypt decrypts a token which was encrypted with a symmetric key.
 	Decrypt(token string, key []byte, payload interface{}, footer interface{}) error
-	// Sign signs token with given private key
+
+	// Sign signs a token with the given private key. For PASETO v1, the key should
+	// be an rsa.PrivateKey. For v2, the key should be an ed25519.PrivateKey.
 	Sign(privateKey crypto.PrivateKey, payload interface{}, options ...opsFunc) (string, error)
-	// Verify verifies token with given public key
+
+	// Verify verifies a token against the given public key. For PASETO v1, the key
+	// key should be an rsa.PublicKey. For v2, the key should be an
+	// ed25519.PublicKey.
 	Verify(token string, publicKey crypto.PublicKey, value interface{}, footer interface{}) error
 }

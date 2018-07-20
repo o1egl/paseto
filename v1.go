@@ -27,7 +27,9 @@ var tokenEncoder = base64.RawURLEncoding
 type pasetoV1 struct {
 }
 
-// NewV1 return V1 implementation on paseto tokens
+// NewV1 returns a v1 implementation of PASETO tokens.
+// You should not use PASETO v1 unless you need interoperability with for legacy
+// systems that cannot use modern cryptography.
 func NewV1() Protocol {
 	return &pasetoV1{}
 }
