@@ -1,5 +1,5 @@
-// PASETO is a secure alternative to the JOSE standards (JWT, JWE, JWS).
-// See https://paseto.io/
+// Package paseto provides a Go implementation of PASETO, a secure alternative
+// to the JOSE standards (JWT, JWE, JWS). See https://paseto.io/
 package paseto
 
 import (
