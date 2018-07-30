@@ -18,7 +18,7 @@ const (
 var headerV2 = []byte("v2.local.")
 var headerV2Public = []byte("v2.public.")
 
-// NewV2 return V2 implementation on paseto tokens
+// NewV2 returns a v1 implementation of PASETO tokens.
 func NewV2() Protocol {
 	return &pasetoV2{}
 }
