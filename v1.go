@@ -84,7 +84,6 @@ func (p *pasetoV1) Encrypt(key []byte, value interface{}, ops ...opsFunc) (strin
 		return "", err
 	}
 
-	preAuthEncode(headerV2, nonce, footer)
 	encryptedPayload := make([]byte, len(payload))
 	cipher.NewCTR(block, nonce[16:]).XORKeyStream(encryptedPayload, payload)
 
