@@ -4,9 +4,8 @@ import (
 	"bytes"
 	"crypto/sha512"
 	"encoding/binary"
-	"io"
-
 	"encoding/json"
+	"io"
 
 	"golang.org/x/crypto/hkdf"
 )

@@ -1,15 +1,16 @@
 package paseto
 
 import (
-	"encoding/hex"
-	"testing"
-
 	"crypto"
+	"encoding/hex"
+	"reflect"
+	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func _testEncryptDecrypt(t *testing.T, impl Protocol) {
+func testEncryptDecrypt(t *testing.T, impl Protocol) {
+	t.Helper()
 	type Case struct {
 		payload         interface{}
 		footer          interface{}
@@ -19,20 +20,20 @@ func _testEncryptDecrypt(t *testing.T, impl Protocol) {
 
 	key, _ := hex.DecodeString("707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f")
 
-	cases := []Case{
-		{
+	cases := map[string]Case{
+		"struct payload, struct footer": {
 			payload:         &TestPerson{Name: "John", Age: 30},
 			footer:          &TestPerson{Name: "Antony", Age: 60},
 			obtainedPayload: &TestPerson{},
 			obtainedFooter:  &TestPerson{},
 		},
-		{
+		"string payload, string footer": {
 			payload:         sPtr("payload"),
 			footer:          sPtr("footer"),
 			obtainedPayload: sPtr(""),
 			obtainedFooter:  sPtr(""),
 		},
-		{
+		"[]byte payload, []byte footer": {
 			payload:         baPtr([]byte("payload")),
 			footer:          baPtr([]byte("footer")),
 			obtainedPayload: baPtr([]byte("")),
@@ -40,62 +41,92 @@ func _testEncryptDecrypt(t *testing.T, impl Protocol) {
 		},
 	}
 
-	for _, c := range cases {
-		if token, err := impl.Encrypt(key, c.payload, WithFooter(c.footer)); assert.NoError(t, err) {
-			if err := impl.Decrypt(token, key, c.obtainedPayload, c.obtainedFooter); assert.NoError(t, err) {
-				assert.Equal(t, c.payload, c.obtainedPayload)
-				assert.EqualValues(t, c.footer, c.obtainedFooter)
+	for name, test := range cases {
+		t.Run(name, func(t *testing.T) {
+			if token, err := impl.Encrypt(key, test.payload, WithFooter(test.footer)); assert.NoError(t, err) {
+				if err := impl.Decrypt(token, key, test.obtainedPayload, test.obtainedFooter); assert.NoError(t, err) {
+					assert.Equal(t, test.payload, test.obtainedPayload)
+					assert.EqualValues(t, test.footer, test.obtainedFooter)
+				}
 			}
-		}
+		})
 	}
 
-	payload := "payload"
-	footer := "footer"
-	if token, err := impl.Encrypt(key, payload, WithFooter(footer)); assert.NoError(t, err) {
-		var obtainedPayload string
-		var obtainedFooter string
-		if err := impl.Decrypt(token, key, &obtainedPayload, &obtainedFooter); assert.NoError(t, err) {
-			assert.Equal(t, payload, obtainedPayload)
-			assert.EqualValues(t, footer, obtainedFooter)
+	t.Run("non pointer string payload and footer", func(t *testing.T) {
+		payload := "payload"
+		footer := "footer"
+		if token, err := impl.Encrypt(key, payload, WithFooter(footer)); assert.NoError(t, err) {
+			var obtainedPayload string
+			var obtainedFooter string
+			if err := impl.Decrypt(token, key, &obtainedPayload, &obtainedFooter); assert.NoError(t, err) {
+				assert.Equal(t, payload, obtainedPayload)
+				assert.EqualValues(t, footer, obtainedFooter)
+			}
 		}
+	})
+}
+
+func testSign(t *testing.T, impl Protocol, privateKey crypto.PrivateKey, publicKey crypto.PublicKey) {
+	t.Helper()
+
+	cases := map[string]struct {
+		payload interface{}
+		footer  interface{}
+	}{
+		"Non empty payload, empty footer": {
+			payload: []byte("Lorem Ipsum"),
+		},
+		"Non empty payload, non empty footer": {
+			payload: []byte("Lorem Ipsum"),
+			footer:  []byte("footer"),
+		},
+		"Struct payload, struct footer": {
+			payload: TestPerson{Name: "John", Age: 30},
+			footer:  TestPerson{Name: "Antony", Age: 60},
+		},
+	}
+
+	for name, test := range cases {
+		t.Run(name, func(t *testing.T) {
+			var ops []opsFunc
+			if test.footer != nil {
+				ops = append(ops, WithFooter(test.footer))
+			}
+			if token, err := impl.Sign(privateKey, test.payload, ops...); assert.NoError(t, err) {
+				var obtainedPayload = ptrOf(test.payload)
+				var obtainedFooter = ptrOf(test.footer)
+				if assert.NoError(t, impl.Verify(token, publicKey, obtainedPayload, obtainedFooter)) {
+					assert.Equal(t, test.payload, valOf(obtainedPayload), "Payload does not match")
+					assert.Equal(t, test.footer, valOf(obtainedFooter), "Footer does not match")
+				}
+			}
+		})
 	}
 }
 
-func _testSign(t *testing.T, impl Protocol, privateKey crypto.PrivateKey, publicKey crypto.PublicKey) {
-	{
-		payload := []byte("Lorem Ipsum")
-		if token, err := impl.Sign(privateKey, payload); assert.NoError(t, err) {
-			var obtainedPayload []byte
-			if assert.NoError(t, impl.Verify(token, publicKey, &obtainedPayload, nil)) {
-				assert.Equal(t, payload, obtainedPayload)
-			}
-		}
+func ptrOf(i interface{}) interface{} {
+	if i == nil {
+		return nil
 	}
-
-	{
-		payload := []byte("Lorem Ipsum")
-		footer := []byte("footer")
-		if token, err := impl.Sign(privateKey, payload, WithFooter(footer)); assert.NoError(t, err) {
-			var obtainedPayload []byte
-			var obtainedFooter []byte
-			if assert.NoError(t, impl.Verify(token, publicKey, &obtainedPayload, &obtainedFooter)) {
-				assert.Equal(t, payload, obtainedPayload)
-				assert.Equal(t, footer, obtainedFooter)
-			}
-		}
+	val := reflect.ValueOf(i)
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
 	}
+	val = reflect.New(val.Type())
 
-	{
-		payload := TestPerson{Name: "John", Age: 30}
-		footer := TestPerson{Name: "Antony", Age: 60}
-		if token, err := impl.Sign(privateKey, &payload, WithFooter(&footer)); assert.NoError(t, err) {
-			var obtainedPayload TestPerson
-			var obtainedFooter TestPerson
-			if assert.NoError(t, impl.Verify(token, publicKey, &obtainedPayload, &obtainedFooter)) {
-				assert.Equal(t, payload, obtainedPayload)
-				assert.Equal(t, footer, obtainedFooter)
-			}
-		}
+	return val.Interface()
+}
+
+func valOf(i interface{}) interface{} {
+	if i == nil {
+		return nil
+	}
+	val := reflect.ValueOf(i)
+	switch val.Kind() {
+	case reflect.Ptr:
+		return val.Elem().Interface()
+	default:
+		panic("Interface is not a pointer")
 	}
 }
 
