@@ -2,13 +2,12 @@ package paseto
 
 import (
 	"bytes"
+	"crypto"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
 	"testing"
-
-	"crypto"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -61,7 +60,6 @@ func init() {
 }
 
 func TestPasetoV1_Encrypt_Compatibility(t *testing.T) {
-	var emptyPayload []byte
 	nullKey := bytes.Repeat([]byte{0}, 32)
 	fullKey := bytes.Repeat([]byte{0xff}, 32)
 	symmetricKey, _ := hex.DecodeString("707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f")
@@ -69,202 +67,193 @@ func TestPasetoV1_Encrypt_Compatibility(t *testing.T) {
 	nonce2, _ := hex.DecodeString("26f7553354482a1d91d4784627854b8da6b8042a7966523c2b404e8dbbe7f7f2")
 	footer := []byte("Cuon Alpinus")
 	payload := []byte("Love is stronger than hate or fear")
+	v1 := NewV1()
 
-	pV1 := NewV1()
+	cases := map[string]struct {
+		key     []byte
+		token   string
+		nonce   []byte
+		payload []byte
+		footer  []byte
+	}{
+		"Empty message, empty footer, empty nonce, null key": {
+			key:   nullKey,
+			token: "v1.local.bB8u6Tj60uJL2RKYR0OCyiGMdds9g-EUs9Q2d3bRTTXyNMehtdOLJS_vq4YzYdaZ6vwItmpjx-Lt3AtVanBmiMyzFyqJMHCaWVMpEMUyxUg",
+			nonce: nonce,
+		},
+		"Empty message, empty footer, empty nonce, full key": {
+			key:   fullKey,
+			token: "v1.local.bB8u6Tj60uJL2RKYR0OCyiGMdds9g-EUs9Q2d3bRTTWgetvu2STfe7gxkDpAOk_IXGmBeea4tGW6HsoH12oKElAWap57-PQMopNurtEoEdk",
+			nonce: nonce,
+		},
+		"Empty message, empty footer, empty nonce, symmetric key": {
+			key:   symmetricKey,
+			token: "v1.local.bB8u6Tj60uJL2RKYR0OCyiGMdds9g-EUs9Q2d3bRTTV8OmiMvoZgzer20TE8kb3R0QN9Ay-ICSkDD1-UDznTCdBiHX1fbb53wdB5ng9nCDY",
+			nonce: nonce,
+		},
 
-	// Empty message, empty footer, empty nonce
-	if token, err := pV1.Encrypt(nullKey, emptyPayload, withNonce(nonce)); assert.NoError(t, err) {
-		expected := "v1.local.bB8u6Tj60uJL2RKYR0OCyiGMdds9g-EUs9Q2d3bRTTXyNMehtdOLJS_vq4YzYdaZ6vwItmpjx-Lt3AtVanBmiMyzFyqJMHCaWVMpEMUyxUg"
-		assert.Equal(t, expected, token)
+		"Empty message, non-empty footer, empty nonce, null key": {
+			key:    nullKey,
+			token:  "v1.local.bB8u6Tj60uJL2RKYR0OCyiGMdds9g-EUs9Q2d3bRTTVhyXOB4vmrFm9GvbJdMZGArV5_10Kxwlv4qSb-MjRGgFzPg00-T2TCFdmc9BMvJAA.Q3VvbiBBbHBpbnVz",
+			footer: footer,
+			nonce:  nonce,
+		},
+		"Empty message, non-empty footer, empty nonce, full key": {
+			key:    fullKey,
+			token:  "v1.local.bB8u6Tj60uJL2RKYR0OCyiGMdds9g-EUs9Q2d3bRTTVna3s7WqUwfQaVM8ddnvjPkrWkYRquX58-_RgRQTnHn7hwGJwKT3H23ZDlioSiJeo.Q3VvbiBBbHBpbnVz",
+			footer: footer,
+			nonce:  nonce,
+		},
+		"Empty message, non-empty footer, empty nonce, symmetric key": {
+			key:    symmetricKey,
+			token:  "v1.local.bB8u6Tj60uJL2RKYR0OCyiGMdds9g-EUs9Q2d3bRTTW9MRfGNyfC8vRpl8xsgnsWt-zHinI9bxLIVF0c6INWOv0_KYIYEaZjrtumY8cyo7M.Q3VvbiBBbHBpbnVz",
+			footer: footer,
+			nonce:  nonce,
+		},
+
+		"Non-empty message, empty footer, empty nonce, null key": {
+			key:     nullKey,
+			token:   "v1.local.N9n3wL3RJUckyWdg4kABZeMwaAfzNT3B64lhyx7QA45LtwQCqG8LYmNfBHIX-4Uxfm8KzaYAUUHqkxxv17MFxsEvk-Ex67g9P-z7EBFW09xxSt21Xm1ELB6pxErl4RE1gGtgvAm9tl3rW2-oy6qHlYx2",
+			payload: payload,
+			nonce:   nonce,
+		},
+		"Non-empty message, empty footer, empty nonce, full key": {
+			key:     fullKey,
+			token:   "v1.local.N9n3wL3RJUckyWdg4kABZeMwaAfzNT3B64lhyx7QA47lQ79wMmeM7sC4c0-BnsXzIteEQQBQpu_FyMznRnzYg4gN-6Kt50rXUxgPPfwDpOr3lUb5U16RzIGrMNemKy0gRhfKvAh1b8N57NKk93pZLpEz",
+			payload: payload,
+			nonce:   nonce,
+		},
+		"Non-empty message, empty footer, empty nonce, symmetric key": {
+			key:     symmetricKey,
+			token:   "v1.local.N9n3wL3RJUckyWdg4kABZeMwaAfzNT3B64lhyx7QA47hvAicYf1zfZrxPrLeBFdbEKO3JRQdn3gjqVEkR1aXXttscmmZ6t48tfuuudETldFD_xbqID74_TIDO1JxDy7OFgYI_PehxzcapQ8t040Fgj9k",
+			payload: payload,
+			nonce:   nonce,
+		},
+
+		"Non-empty message, non-empty footer, non-empty nonce, null key": {
+			key:     nullKey,
+			token:   "v1.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYbivwqsESBnr82_ZoMFFGzolJ6kpkOihkulB4K_JhfMHoFw4E9yCR6ltWX3e9MTNSud8mpBzZiwNXNbgXBLxF_Igb5Ixo_feIonmCucOXDlLVUT.Q3VvbiBBbHBpbnVz",
+			payload: payload,
+			footer:  footer,
+			nonce:   nonce2,
+		},
+		"Non-empty message, non-empty footer, non-empty nonce, full key": {
+			key:     fullKey,
+			token:   "v1.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYZ8rQTA12SNb9cY8jVtVyikY2jj_tEBzY5O7GJsxb5MdQ6cMSnDz2uJGV20vhzVDgvkjdEcN9D44VaHid26qy1_1YlHjU6pmyTmJt8WT21LqzDl.Q3VvbiBBbHBpbnVz",
+			payload: payload,
+			footer:  footer,
+			nonce:   nonce2,
+		},
+		"Non-empty message, non-empty footer, non-empty nonce, symmetric key": {
+			key:     symmetricKey,
+			token:   "v1.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYYTojmVaYumJSQt8aggtCaFKWyaodw5k-CUWhYKATopiabAl4OAmTxHCfm2E4NSPvrmMcmi8n-JcZ93HpcxC6rx_ps22vutv7iP7wf8QcSD1Mwx.Q3VvbiBBbHBpbnVz",
+			payload: payload,
+			footer:  footer,
+			nonce:   nonce2,
+		},
 	}
 
-	if token, err := pV1.Encrypt(fullKey, emptyPayload, withNonce(nonce)); assert.NoError(t, err) {
-		expected := "v1.local.bB8u6Tj60uJL2RKYR0OCyiGMdds9g-EUs9Q2d3bRTTWgetvu2STfe7gxkDpAOk_IXGmBeea4tGW6HsoH12oKElAWap57-PQMopNurtEoEdk"
-		assert.Equal(t, expected, token)
-	}
-
-	if token, err := pV1.Encrypt(symmetricKey, emptyPayload, withNonce(nonce)); assert.NoError(t, err) {
-		expected := "v1.local.bB8u6Tj60uJL2RKYR0OCyiGMdds9g-EUs9Q2d3bRTTV8OmiMvoZgzer20TE8kb3R0QN9Ay-ICSkDD1-UDznTCdBiHX1fbb53wdB5ng9nCDY"
-		assert.Equal(t, expected, token)
-	}
-
-	// Empty message, non-empty footer, empty nonce
-	if token, err := pV1.Encrypt(nullKey, emptyPayload, withNonce(nonce), WithFooter(footer)); assert.NoError(t, err) {
-		expected := "v1.local.bB8u6Tj60uJL2RKYR0OCyiGMdds9g-EUs9Q2d3bRTTVhyXOB4vmrFm9GvbJdMZGArV5_10Kxwlv4qSb-MjRGgFzPg00-T2TCFdmc9BMvJAA.Q3VvbiBBbHBpbnVz"
-		assert.Equal(t, expected, token)
-	}
-
-	if token, err := pV1.Encrypt(fullKey, emptyPayload, withNonce(nonce), WithFooter(footer)); assert.NoError(t, err) {
-		expected := "v1.local.bB8u6Tj60uJL2RKYR0OCyiGMdds9g-EUs9Q2d3bRTTVna3s7WqUwfQaVM8ddnvjPkrWkYRquX58-_RgRQTnHn7hwGJwKT3H23ZDlioSiJeo.Q3VvbiBBbHBpbnVz"
-		assert.Equal(t, expected, token)
-	}
-
-	if token, err := pV1.Encrypt(symmetricKey, emptyPayload, withNonce(nonce), WithFooter(footer)); assert.NoError(t, err) {
-		expected := "v1.local.bB8u6Tj60uJL2RKYR0OCyiGMdds9g-EUs9Q2d3bRTTW9MRfGNyfC8vRpl8xsgnsWt-zHinI9bxLIVF0c6INWOv0_KYIYEaZjrtumY8cyo7M.Q3VvbiBBbHBpbnVz"
-		assert.Equal(t, expected, token)
-	}
-
-	// Non-empty message, empty footer, empty nonce
-	if token, err := pV1.Encrypt(nullKey, payload, withNonce(nonce)); assert.NoError(t, err) {
-		expected := "v1.local.N9n3wL3RJUckyWdg4kABZeMwaAfzNT3B64lhyx7QA45LtwQCqG8LYmNfBHIX-4Uxfm8KzaYAUUHqkxxv17MFxsEvk-Ex67g9P-z7EBFW09xxSt21Xm1ELB6pxErl4RE1gGtgvAm9tl3rW2-oy6qHlYx2"
-		assert.Equal(t, expected, token)
-	}
-
-	if token, err := pV1.Encrypt(fullKey, payload, withNonce(nonce)); assert.NoError(t, err) {
-		expected := "v1.local.N9n3wL3RJUckyWdg4kABZeMwaAfzNT3B64lhyx7QA47lQ79wMmeM7sC4c0-BnsXzIteEQQBQpu_FyMznRnzYg4gN-6Kt50rXUxgPPfwDpOr3lUb5U16RzIGrMNemKy0gRhfKvAh1b8N57NKk93pZLpEz"
-		assert.Equal(t, expected, token)
-	}
-
-	if token, err := pV1.Encrypt(symmetricKey, payload, withNonce(nonce)); assert.NoError(t, err) {
-		expected := "v1.local.N9n3wL3RJUckyWdg4kABZeMwaAfzNT3B64lhyx7QA47hvAicYf1zfZrxPrLeBFdbEKO3JRQdn3gjqVEkR1aXXttscmmZ6t48tfuuudETldFD_xbqID74_TIDO1JxDy7OFgYI_PehxzcapQ8t040Fgj9k"
-		assert.Equal(t, expected, token)
-	}
-
-	// Non-empty message, non-empty footer, non-empty nonce
-	if token, err := pV1.Encrypt(nullKey, payload, withNonce(nonce2), WithFooter(footer)); assert.NoError(t, err) {
-		expected := "v1.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYbivwqsESBnr82_ZoMFFGzolJ6kpkOihkulB4K_JhfMHoFw4E9yCR6ltWX3e9MTNSud8mpBzZiwNXNbgXBLxF_Igb5Ixo_feIonmCucOXDlLVUT.Q3VvbiBBbHBpbnVz"
-		assert.Equal(t, expected, token)
-	}
-
-	if token, err := pV1.Encrypt(fullKey, payload, withNonce(nonce2), WithFooter(footer)); assert.NoError(t, err) {
-		expected := "v1.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYZ8rQTA12SNb9cY8jVtVyikY2jj_tEBzY5O7GJsxb5MdQ6cMSnDz2uJGV20vhzVDgvkjdEcN9D44VaHid26qy1_1YlHjU6pmyTmJt8WT21LqzDl.Q3VvbiBBbHBpbnVz"
-		assert.Equal(t, expected, token)
-	}
-
-	if token, err := pV1.Encrypt(symmetricKey, payload, withNonce(nonce2), WithFooter(footer)); assert.NoError(t, err) {
-		expected := "v1.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYYTojmVaYumJSQt8aggtCaFKWyaodw5k-CUWhYKATopiabAl4OAmTxHCfm2E4NSPvrmMcmi8n-JcZ93HpcxC6rx_ps22vutv7iP7wf8QcSD1Mwx.Q3VvbiBBbHBpbnVz"
-		assert.Equal(t, expected, token)
+	for name, test := range cases {
+		t.Run(name, func(t *testing.T) {
+			options := []opsFunc{withNonce(test.nonce)}
+			if test.footer != nil {
+				options = append(options, WithFooter(test.footer))
+			}
+			if token, err := v1.Encrypt(test.key, test.payload, options...); assert.NoError(t, err) {
+				assert.Equal(t, test.token, token)
+			}
+		})
 	}
 }
 
 func TestPasetoV1_Decrypt_Compatibility(t *testing.T) {
-	var emptyPayload []byte
-	var emptyFooter []byte
 	nullKey := bytes.Repeat([]byte{0}, 32)
 	fullKey := bytes.Repeat([]byte{0xff}, 32)
 	symmetricKey, _ := hex.DecodeString("707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f")
 	fullFooter := []byte("Cuon Alpinus")
 	fullPayload := []byte("Love is stronger than hate or fear")
+	v1 := NewV1()
 
-	pV1 := NewV1()
+	cases := map[string]struct {
+		token   string
+		key     []byte
+		payload []byte
+		footer  []byte
+	}{
+		"Empty message, empty footer, empty nonce, null key": {
+			token: "v1.local.bB8u6Tj60uJL2RKYR0OCyiGMdds9g-EUs9Q2d3bRTTXyNMehtdOLJS_vq4YzYdaZ6vwItmpjx-Lt3AtVanBmiMyzFyqJMHCaWVMpEMUyxUg",
+			key:   nullKey,
+		},
+		"Empty message, empty footer, empty nonce, full key": {
+			token: "v1.local.bB8u6Tj60uJL2RKYR0OCyiGMdds9g-EUs9Q2d3bRTTWgetvu2STfe7gxkDpAOk_IXGmBeea4tGW6HsoH12oKElAWap57-PQMopNurtEoEdk",
+			key:   fullKey,
+		},
+		"Empty message, empty footer, empty nonce, symmetric key": {
+			token: "v1.local.bB8u6Tj60uJL2RKYR0OCyiGMdds9g-EUs9Q2d3bRTTV8OmiMvoZgzer20TE8kb3R0QN9Ay-ICSkDD1-UDznTCdBiHX1fbb53wdB5ng9nCDY",
+			key:   symmetricKey,
+		},
 
-	{
-		token := "v1.local.bB8u6Tj60uJL2RKYR0OCyiGMdds9g-EUs9Q2d3bRTTXyNMehtdOLJS_vq4YzYdaZ6vwItmpjx-Lt3AtVanBmiMyzFyqJMHCaWVMpEMUyxUg"
-		var payload []byte
-		var footer []byte
-		if assert.NoError(t, pV1.Decrypt(token, nullKey, &payload, &footer)) {
-			assert.Equal(t, emptyPayload, payload)
-			assert.Equal(t, footer, emptyFooter)
-		}
-	}
+		"Empty message, non-empty footer, empty nonce, null key": {
+			token:  "v1.local.bB8u6Tj60uJL2RKYR0OCyiGMdds9g-EUs9Q2d3bRTTVhyXOB4vmrFm9GvbJdMZGArV5_10Kxwlv4qSb-MjRGgFzPg00-T2TCFdmc9BMvJAA.Q3VvbiBBbHBpbnVz",
+			key:    nullKey,
+			footer: fullFooter,
+		},
+		"Empty message, non-empty footer, empty nonce, full key": {
+			token:  "v1.local.bB8u6Tj60uJL2RKYR0OCyiGMdds9g-EUs9Q2d3bRTTVna3s7WqUwfQaVM8ddnvjPkrWkYRquX58-_RgRQTnHn7hwGJwKT3H23ZDlioSiJeo.Q3VvbiBBbHBpbnVz",
+			key:    fullKey,
+			footer: fullFooter,
+		},
+		"Empty message, non-empty footer, empty nonce, symmetric key": {
+			token:  "v1.local.bB8u6Tj60uJL2RKYR0OCyiGMdds9g-EUs9Q2d3bRTTW9MRfGNyfC8vRpl8xsgnsWt-zHinI9bxLIVF0c6INWOv0_KYIYEaZjrtumY8cyo7M.Q3VvbiBBbHBpbnVz",
+			key:    symmetricKey,
+			footer: fullFooter,
+		},
 
-	{
-		token := "v1.local.bB8u6Tj60uJL2RKYR0OCyiGMdds9g-EUs9Q2d3bRTTWgetvu2STfe7gxkDpAOk_IXGmBeea4tGW6HsoH12oKElAWap57-PQMopNurtEoEdk"
-		var payload []byte
-		var footer []byte
-		if assert.NoError(t, pV1.Decrypt(token, fullKey, &payload, &footer)) {
-			assert.Equal(t, emptyPayload, payload)
-			assert.Equal(t, footer, emptyFooter)
-		}
-	}
+		"Non-empty message, empty footer, empty nonce, null key": {
+			token:   "v1.local.N9n3wL3RJUckyWdg4kABZeMwaAfzNT3B64lhyx7QA45LtwQCqG8LYmNfBHIX-4Uxfm8KzaYAUUHqkxxv17MFxsEvk-Ex67g9P-z7EBFW09xxSt21Xm1ELB6pxErl4RE1gGtgvAm9tl3rW2-oy6qHlYx2",
+			key:     nullKey,
+			payload: fullPayload,
+		},
+		"Non-empty message, empty footer, empty nonce, full key": {
+			token:   "v1.local.N9n3wL3RJUckyWdg4kABZeMwaAfzNT3B64lhyx7QA47lQ79wMmeM7sC4c0-BnsXzIteEQQBQpu_FyMznRnzYg4gN-6Kt50rXUxgPPfwDpOr3lUb5U16RzIGrMNemKy0gRhfKvAh1b8N57NKk93pZLpEz",
+			key:     fullKey,
+			payload: fullPayload,
+		},
+		"Non-empty message, empty footer, empty nonce, symmetric key": {
+			token:   "v1.local.N9n3wL3RJUckyWdg4kABZeMwaAfzNT3B64lhyx7QA47hvAicYf1zfZrxPrLeBFdbEKO3JRQdn3gjqVEkR1aXXttscmmZ6t48tfuuudETldFD_xbqID74_TIDO1JxDy7OFgYI_PehxzcapQ8t040Fgj9k",
+			key:     symmetricKey,
+			payload: fullPayload,
+		},
 
-	{
-		token := "v1.local.bB8u6Tj60uJL2RKYR0OCyiGMdds9g-EUs9Q2d3bRTTV8OmiMvoZgzer20TE8kb3R0QN9Ay-ICSkDD1-UDznTCdBiHX1fbb53wdB5ng9nCDY"
-		var payload []byte
-		var footer []byte
-		if assert.NoError(t, pV1.Decrypt(token, symmetricKey, &payload, &footer)) {
-			assert.Equal(t, emptyPayload, payload)
-			assert.Equal(t, footer, emptyFooter)
-		}
-	}
-
-	// Empty message, non-empty footer, empty nonce
-	{
-		token := "v1.local.bB8u6Tj60uJL2RKYR0OCyiGMdds9g-EUs9Q2d3bRTTVhyXOB4vmrFm9GvbJdMZGArV5_10Kxwlv4qSb-MjRGgFzPg00-T2TCFdmc9BMvJAA.Q3VvbiBBbHBpbnVz"
-		var payload []byte
-		var footer []byte
-		if assert.NoError(t, pV1.Decrypt(token, nullKey, &payload, &footer)) {
-			assert.Equal(t, emptyPayload, payload)
-			assert.Equal(t, fullFooter, footer)
-		}
-	}
-
-	{
-		token := "v1.local.bB8u6Tj60uJL2RKYR0OCyiGMdds9g-EUs9Q2d3bRTTVna3s7WqUwfQaVM8ddnvjPkrWkYRquX58-_RgRQTnHn7hwGJwKT3H23ZDlioSiJeo.Q3VvbiBBbHBpbnVz"
-		var payload []byte
-		var footer []byte
-		if assert.NoError(t, pV1.Decrypt(token, fullKey, &payload, &footer)) {
-			assert.Equal(t, emptyPayload, payload)
-			assert.Equal(t, fullFooter, footer)
-		}
-	}
-
-	{
-		token := "v1.local.bB8u6Tj60uJL2RKYR0OCyiGMdds9g-EUs9Q2d3bRTTW9MRfGNyfC8vRpl8xsgnsWt-zHinI9bxLIVF0c6INWOv0_KYIYEaZjrtumY8cyo7M.Q3VvbiBBbHBpbnVz"
-		var payload []byte
-		var footer []byte
-		if assert.NoError(t, pV1.Decrypt(token, symmetricKey, &payload, &footer)) {
-			assert.Equal(t, emptyPayload, payload)
-			assert.Equal(t, fullFooter, footer)
-		}
-	}
-
-	// Non-empty message, empty footer, empty nonce
-	{
-		token := "v1.local.N9n3wL3RJUckyWdg4kABZeMwaAfzNT3B64lhyx7QA45LtwQCqG8LYmNfBHIX-4Uxfm8KzaYAUUHqkxxv17MFxsEvk-Ex67g9P-z7EBFW09xxSt21Xm1ELB6pxErl4RE1gGtgvAm9tl3rW2-oy6qHlYx2"
-		var payload []byte
-		var footer []byte
-		if assert.NoError(t, pV1.Decrypt(token, nullKey, &payload, &footer)) {
-			assert.Equal(t, fullPayload, payload)
-			assert.Equal(t, emptyFooter, footer)
-		}
-	}
-	{
-		token := "v1.local.N9n3wL3RJUckyWdg4kABZeMwaAfzNT3B64lhyx7QA47lQ79wMmeM7sC4c0-BnsXzIteEQQBQpu_FyMznRnzYg4gN-6Kt50rXUxgPPfwDpOr3lUb5U16RzIGrMNemKy0gRhfKvAh1b8N57NKk93pZLpEz"
-		var payload []byte
-		var footer []byte
-		if assert.NoError(t, pV1.Decrypt(token, fullKey, &payload, &footer)) {
-			assert.Equal(t, fullPayload, payload)
-			assert.Equal(t, emptyFooter, footer)
-		}
-	}
-	{
-		token := "v1.local.N9n3wL3RJUckyWdg4kABZeMwaAfzNT3B64lhyx7QA47hvAicYf1zfZrxPrLeBFdbEKO3JRQdn3gjqVEkR1aXXttscmmZ6t48tfuuudETldFD_xbqID74_TIDO1JxDy7OFgYI_PehxzcapQ8t040Fgj9k"
-		var payload []byte
-		var footer []byte
-		if assert.NoError(t, pV1.Decrypt(token, symmetricKey, &payload, &footer)) {
-			assert.Equal(t, fullPayload, payload)
-			assert.Equal(t, emptyFooter, footer)
-		}
+		"Non-empty message, non-empty footer, non-empty nonce, null key": {
+			token:   "v1.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYbivwqsESBnr82_ZoMFFGzolJ6kpkOihkulB4K_JhfMHoFw4E9yCR6ltWX3e9MTNSud8mpBzZiwNXNbgXBLxF_Igb5Ixo_feIonmCucOXDlLVUT.Q3VvbiBBbHBpbnVz",
+			key:     nullKey,
+			payload: fullPayload,
+			footer:  fullFooter,
+		},
+		"Non-empty message, non-empty footer, non-empty nonce, full key": {
+			token:   "v1.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYZ8rQTA12SNb9cY8jVtVyikY2jj_tEBzY5O7GJsxb5MdQ6cMSnDz2uJGV20vhzVDgvkjdEcN9D44VaHid26qy1_1YlHjU6pmyTmJt8WT21LqzDl.Q3VvbiBBbHBpbnVz",
+			key:     fullKey,
+			payload: fullPayload,
+			footer:  fullFooter,
+		},
+		"Non-empty message, non-empty footer, non-empty nonce, symmetric key": {
+			token:   "v1.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYYTojmVaYumJSQt8aggtCaFKWyaodw5k-CUWhYKATopiabAl4OAmTxHCfm2E4NSPvrmMcmi8n-JcZ93HpcxC6rx_ps22vutv7iP7wf8QcSD1Mwx.Q3VvbiBBbHBpbnVz",
+			key:     symmetricKey,
+			payload: fullPayload,
+			footer:  fullFooter,
+		},
 	}
 
-	// Non-empty message, non-empty footer, non-empty nonce
-	{
-		token := "v1.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYbivwqsESBnr82_ZoMFFGzolJ6kpkOihkulB4K_JhfMHoFw4E9yCR6ltWX3e9MTNSud8mpBzZiwNXNbgXBLxF_Igb5Ixo_feIonmCucOXDlLVUT.Q3VvbiBBbHBpbnVz"
-		var payload []byte
-		var footer []byte
-		if assert.NoError(t, pV1.Decrypt(token, nullKey, &payload, &footer)) {
-			assert.Equal(t, fullPayload, payload)
-			assert.Equal(t, fullFooter, footer)
-		}
-	}
-	{
-		token := "v1.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYZ8rQTA12SNb9cY8jVtVyikY2jj_tEBzY5O7GJsxb5MdQ6cMSnDz2uJGV20vhzVDgvkjdEcN9D44VaHid26qy1_1YlHjU6pmyTmJt8WT21LqzDl.Q3VvbiBBbHBpbnVz"
-		var payload []byte
-		var footer []byte
-		if assert.NoError(t, pV1.Decrypt(token, fullKey, &payload, &footer)) {
-			assert.Equal(t, fullPayload, payload)
-			assert.Equal(t, fullFooter, footer)
-		}
-	}
-	{
-		token := "v1.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYYTojmVaYumJSQt8aggtCaFKWyaodw5k-CUWhYKATopiabAl4OAmTxHCfm2E4NSPvrmMcmi8n-JcZ93HpcxC6rx_ps22vutv7iP7wf8QcSD1Mwx.Q3VvbiBBbHBpbnVz"
-		var payload []byte
-		var footer []byte
-		if assert.NoError(t, pV1.Decrypt(token, symmetricKey, &payload, &footer)) {
-			assert.Equal(t, fullPayload, payload)
-			assert.Equal(t, fullFooter, footer)
-		}
+	for name, test := range cases {
+		t.Run(name, func(t *testing.T) {
+			var payload []byte
+			var footer []byte
+			if assert.NoError(t, v1.Decrypt(test.token, test.key, &payload, &footer)) {
+				assert.Equal(t, test.payload, payload, "Payload does not match")
+				assert.Equal(t, test.footer, footer, "Footer does not match")
+			}
+		})
 	}
 }
 
@@ -274,98 +263,121 @@ func TestPasetoV1_EncryptDecrypt(t *testing.T) {
 
 func TestPasetoV1_Decrypt_Error(t *testing.T) {
 	symmetricKey, _ := hex.DecodeString("707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f")
-	pV1 := NewV1()
+	v1 := NewV1()
 
-	{
-		token := "v1.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYYTojmVaYumJSQt8aggtCaFKWyaodw5k-CUWhYKATopiabAl4OAmTxHCfm2E4NSPvrmMcmi8n-JcZ93HpcxC6rx_ps22vutv7iP7wf8QcSD1Mwx.Q3VvbiBBbHBpbnVz"
-		var payload struct{}
-		var footer []byte
-		assert.EqualError(t, pV1.Decrypt(token, symmetricKey, payload, &footer), ErrDataUnmarshal.Error())
-	}
-	{
-		token := "v1.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYYTojmVaYumJSQt8aggtCaFKWyaodw5k-CUWhYKATopiabAl4OAmTxHCfm2E4NSPvrmMcmi8n-JcZ93HpcxC6rx_ps22vutv7iP7wf8QcSD1Mwx.Q3VvbiBBbHBpbnVz"
-		var payload []byte
-		var footer struct{}
-		assert.EqualError(t, pV1.Decrypt(token, symmetricKey, &payload, &footer), ErrDataUnmarshal.Error())
-	}
-	{
-		token := "v1.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYYTojmVaYumJSQt8aggtCaFKWyaodw5k-CUWhYKATopiabAl4OAmTxHCfm2E4NSPvrmMcmi8n-JcZ93HpcxC6rx_ps22vutv7iP7wf8QcSD1Mwy.Q3VvbiBBbHBpbnVz"
-		var payload []byte
-		var footer []byte
-		assert.EqualError(t, pV1.Decrypt(token, symmetricKey, &payload, &footer), ErrInvalidTokenAuth.Error())
-	}
-	{
-		token := "v1.test.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYYTojmVaYumJSQt8aggtCaFKWyaodw5k-CUWhYKATopiabAl4OAmTxHCfm2E4NSPvrmMcmi8n-JcZ93HpcxC6rx_ps22vutv7iP7wf8QcSD1Mwy.Q3VvbiBBbHBpbnVz"
-		var payload []byte
-		var footer []byte
-		assert.EqualError(t, pV1.Decrypt(token, symmetricKey, &payload, &footer), ErrIncorrectTokenHeader.Error())
-	}
-	{
-		token := "v1.local.rElw-WywOu.SD1Mwy.Q3VvbiBBbHBpbnVz"
-		var payload []byte
-		var footer []byte
-		assert.EqualError(t, pV1.Decrypt(token, symmetricKey, &payload, &footer), ErrIncorrectTokenFormat.Error())
-	}
-	{
-		token := "v1.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTn.Q3VvbiBBbHBpbnVz"
-		var payload []byte
-		var footer []byte
-		assert.EqualError(t, pV1.Decrypt(token, symmetricKey, &payload, &footer), ErrIncorrectTokenFormat.Error())
+	cases := map[string]struct {
+		token   string
+		payload interface{}
+		footer  interface{}
+		error   error
+	}{
+		"Payload unmarshal error": {
+			token:   "v1.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYYTojmVaYumJSQt8aggtCaFKWyaodw5k-CUWhYKATopiabAl4OAmTxHCfm2E4NSPvrmMcmi8n-JcZ93HpcxC6rx_ps22vutv7iP7wf8QcSD1Mwx.Q3VvbiBBbHBpbnVz",
+			payload: struct{}{},
+			footer:  baPtr([]byte{}),
+			error:   ErrDataUnmarshal,
+		},
+		"Footer unmarshal error": {
+			token:   "v1.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYYTojmVaYumJSQt8aggtCaFKWyaodw5k-CUWhYKATopiabAl4OAmTxHCfm2E4NSPvrmMcmi8n-JcZ93HpcxC6rx_ps22vutv7iP7wf8QcSD1Mwx.Q3VvbiBBbHBpbnVz",
+			payload: baPtr([]byte{}),
+			footer:  struct{}{},
+			error:   ErrDataUnmarshal,
+		},
+		"Invalid token header": {
+			token:   "v1.test.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYYTojmVaYumJSQt8aggtCaFKWyaodw5k-CUWhYKATopiabAl4OAmTxHCfm2E4NSPvrmMcmi8n-JcZ93HpcxC6rx_ps22vutv7iP7wf8QcSD1Mwy.Q3VvbiBBbHBpbnVz",
+			payload: baPtr([]byte{}),
+			footer:  baPtr([]byte{}),
+			error:   ErrIncorrectTokenHeader,
+		},
+		"Too many parts": {
+			token:   "v1.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTn.Q3VvbiBBbHBpbnVz",
+			payload: baPtr([]byte{}),
+			footer:  baPtr([]byte{}),
+			error:   ErrIncorrectTokenFormat,
+		},
+		"Incorrect nonce size": {
+			token:   "v1.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTn.Q3VvbiBBbHBpbnVz",
+			payload: baPtr([]byte{}),
+			footer:  baPtr([]byte{}),
+			error:   ErrIncorrectTokenFormat,
+		},
+		"Invalid token auth": {
+			token:   "v1.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYYTojmVaYumJSQt8aggtCaFKWyaodw5k-CUWhYKATopiabAl4OAmTxHCfm2E4NSPvrmMcmi8n-JcZ93HpcxC6rx_ps22vutv7iP7wf8QcSD1Mwy.Q3VvbiBBbHBpbnVz",
+			payload: baPtr([]byte{}),
+			footer:  baPtr([]byte{}),
+			error:   ErrInvalidTokenAuth,
+		},
 	}
 
+	for name, test := range cases {
+		t.Run(name, func(t *testing.T) {
+			assert.EqualError(t, v1.Decrypt(test.token, symmetricKey, test.payload, test.footer), test.error.Error())
+		})
+	}
 }
 
 func TestPasetoV1_SignVerify(t *testing.T) {
 	testSign(t, NewV1(), rsaPrivateKey, rsaPublicKey)
-
 }
 
 func TestPasetoV1_Sign_Error(t *testing.T) {
 	v1 := NewV1()
 
-	cases := []struct {
+	cases := map[string]struct {
 		key     crypto.PrivateKey
 		payload interface{}
 		footer  interface{}
 		err     error
 	}{
-		{
+		"Invalid key": {
 			key: "incorrect",
 			err: ErrIncorrectPrivateKeyType,
 		},
 	}
 
-	for _, c := range cases {
-		_, err := v1.Sign(c.key, c.payload, WithFooter(c.footer))
-		assert.EqualError(t, err, c.err.Error())
+	for name, test := range cases {
+		t.Run(name, func(t *testing.T) {
+			_, err := v1.Sign(test.key, test.payload, WithFooter(test.footer))
+			assert.EqualError(t, err, test.err.Error())
+		})
 	}
 }
 
 func TestPasetoV1_Verify_Error(t *testing.T) {
-	pV1 := NewV1()
-	token := "v1.public.eyJOYW1lIjoiSm9obiIsIkFnZSI6MzB9vGJwH3bQzs04XkPPlq2jA3B-_xKzA_qW193-eer9mbZJmgq5zDUY8OV2fVUSZLRVPz4yMe2hFg17riaI8nxSqc1dMnXpwbk2SnUfxyfZ2ZQjKj-g0JiYUrekqvi21YbFGMg6DHWXFlHkX32JY-fEcyu88pwB-VOdJdKX2LVGxVQVVOFBpD7gNXGoFsrYsSAUjMsI80x75NSAuAcTdy3BldR2YA9J0UhOcs-kfQLTOM5unhQvPd9411AaIVfhPtTy0uPooJfsClEjnJnL8Q-uCINjbWnlFtcb2nlYKjbAIXbiM97FvQvakkt6diU0yNV6Fh_C6QCTKZibZzlMLy97QA.eyJOYW1lIjoiQW50b255IiwiQWdlIjo2MH0"
+	v1 := NewV1()
+	const token = "v1.public.eyJOYW1lIjoiSm9obiIsIkFnZSI6MzB9vGJwH3bQzs04XkPPlq2jA3B-_xKzA_qW193-eer9mbZJmgq5zDUY8OV2fVUSZLRVPz4yMe2hFg17riaI8nxSqc1dMnXpwbk2SnUfxyfZ2ZQjKj-g0JiYUrekqvi21YbFGMg6DHWXFlHkX32JY-fEcyu88pwB-VOdJdKX2LVGxVQVVOFBpD7gNXGoFsrYsSAUjMsI80x75NSAuAcTdy3BldR2YA9J0UhOcs-kfQLTOM5unhQvPd9411AaIVfhPtTy0uPooJfsClEjnJnL8Q-uCINjbWnlFtcb2nlYKjbAIXbiM97FvQvakkt6diU0yNV6Fh_C6QCTKZibZzlMLy97QA.eyJOYW1lIjoiQW50b255IiwiQWdlIjo2MH0"
 
-	{
-		payload := TestPerson{}
-		footer := TestPerson{}
-		assert.EqualError(t, pV1.Verify(token, rsaPublicKey, payload, &footer), ErrDataUnmarshal.Error())
-	}
-	{
-		payload := TestPerson{}
-		footer := TestPerson{}
-		assert.EqualError(t, pV1.Verify(token, rsaPublicKey, &payload, footer), ErrDataUnmarshal.Error())
+	cases := map[string]struct {
+		token   string
+		payload interface{}
+		footer  interface{}
+		error   error
+	}{
+		"Payload unmarshal error": {
+			token:   token,
+			payload: TestPerson{},
+			footer:  &TestPerson{},
+			error:   ErrDataUnmarshal,
+		},
+		"Footer unmarshal error": {
+			token:   token,
+			payload: &TestPerson{},
+			footer:  TestPerson{},
+			error:   ErrDataUnmarshal,
+		},
+		"Incorrect sign size": {
+			token: "v1.public.eyJOYW1lIjoiSm9obiIsIkF",
+			error: ErrIncorrectTokenFormat,
+		},
+		"Too many token parts": {
+			token: "v1.public.eyJOYW1lIj.oiSm9o.biIsIkF",
+			error: ErrIncorrectTokenFormat,
+		},
 	}
 
-	{
-		payload := ""
-		footer := ""
-		assert.EqualError(t, pV1.Verify("v1.public.eyJOYW1lIjoiSm9obiIsIkF", rsaPublicKey, &payload, footer), ErrIncorrectTokenFormat.Error())
+	for name, test := range cases {
+		t.Run(name, func(t *testing.T) {
+			assert.EqualError(t, v1.Verify(test.token, rsaPublicKey, test.payload, test.footer), test.error.Error())
+		})
 	}
-
-	{
-		payload := ""
-		footer := ""
-		assert.EqualError(t, pV1.Verify("v1.public.eyJOYW1lIj.oiSm9o.biIsIkF", rsaPublicKey, &payload, footer), ErrIncorrectTokenFormat.Error())
-	}
-
 }

@@ -1,16 +1,15 @@
 package paseto
 
 import (
+	"crypto"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/hmac"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha512"
 	"encoding/base64"
 	"io"
-
-	"crypto"
-	"crypto/rsa"
 )
 
 const (

@@ -2,9 +2,10 @@ package paseto
 
 import (
 	"encoding/json"
-	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestJsonToken(t *testing.T) {
@@ -74,31 +75,32 @@ func TestJsonToken_MarshalJSON(t *testing.T) {
 }
 
 func TestJsonToken_UnmarshalJSON_Err(t *testing.T) {
-	cases := []struct {
+	cases := map[string]struct {
 		srt string
 		err string
 	}{
-		{
+		"Invalid json": {
 			srt: `"test"`,
 			err: "cannot unmarshal",
 		},
-		{
+		"Invalid Expiration time format": {
 			srt: `{"exp":"11/03/2018"}`,
 			err: "incorrect time format for Expiration field",
 		},
-		{
+		"Invalid IssuedAt time format": {
 			srt: `{"iat":"11/03/2018"}`,
 			err: "incorrect time format for IssuedAt field",
 		},
-		{
+		"Invalid NotBefore time format": {
 			srt: `{"nbf":"11/03/2018"}`,
 			err: "incorrect time format for NotBefore field",
 		},
 	}
-	for _, c := range cases {
-		if err := json.Unmarshal([]byte(c.srt), &JSONToken{}); assert.Error(t, err) {
-			assert.Contains(t, err.Error(), c.err)
-		}
-
+	for name, test := range cases {
+		t.Run(name, func(t *testing.T) {
+			if err := json.Unmarshal([]byte(test.srt), &JSONToken{}); assert.Error(t, err) {
+				assert.Contains(t, err.Error(), test.err)
+			}
+		})
 	}
 }
