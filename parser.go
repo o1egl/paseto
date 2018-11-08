@@ -16,10 +16,10 @@ type Version string
 type Purpose int
 
 const (
-	// V1 defines protocol version 1
-	V1 = Version("v1")
-	// V2 defines protocol version 2
-	V2 = Version("v2")
+	// Version1 defines protocol version 1
+	Version1 = Version("v1")
+	// Version2 defines protocol version 2
+	Version2 = Version("v2")
 )
 
 const (
@@ -30,8 +30,8 @@ const (
 )
 
 var availableVersions = map[Version]Protocol{
-	V1: NewV1(),
-	V2: NewV2(),
+	Version1: NewV1(),
+	Version2: NewV2(),
 }
 
 // Parse extracts the payload and footer from the token by calling either
@@ -83,7 +83,7 @@ func ParseFooter(token string, footer interface{}) error {
 	return nil
 }
 
-// GetTokenInfo returns the token version (paseto.V1 or paseto.V2) and purpose
+// GetTokenInfo returns the token version (paseto.Version1 or paseto.Version2) and purpose
 // (paseto.LOCAL or paseto.PUBLIC).
 func GetTokenInfo(token string) (Version, Purpose, error) {
 	parts := strings.Split(token, ".")
@@ -95,10 +95,10 @@ func GetTokenInfo(token string) (Version, Purpose, error) {
 	var purpose Purpose
 
 	switch parts[0] {
-	case string(V1):
-		version = V1
-	case string(V2):
-		version = V2
+	case string(Version1):
+		version = Version1
+	case string(Version2):
+		version = Version2
 	default:
 		return "", 0, ErrUnsupportedTokenVersion
 	}

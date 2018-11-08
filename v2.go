@@ -20,17 +20,18 @@ var headerV2 = []byte("v2.local.")
 var headerV2Public = []byte("v2.public.")
 
 // NewV2 returns a v2 implementation of PASETO tokens.
-func NewV2() *PasetoV2 {
-	return &PasetoV2{}
+func NewV2() *V2 {
+	return &V2{}
 }
 
-type PasetoV2 struct {
+// V2 is a v2 implementation of PASETO tokens
+type V2 struct {
 	// this property is used for testing purposes only
 	nonce []byte
 }
 
 // Encrypt implements Protocol.Encrypt
-func (p *PasetoV2) Encrypt(key []byte, payload interface{}, footer interface{}) (string, error) {
+func (p *V2) Encrypt(key []byte, payload interface{}, footer interface{}) (string, error) {
 	payloadBytes, err := infToByteArr(payload)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to encode payload to []byte")
@@ -73,7 +74,7 @@ func (p *PasetoV2) Encrypt(key []byte, payload interface{}, footer interface{}) 
 }
 
 // Decrypt implements Protocol.Decrypt
-func (*PasetoV2) Decrypt(token string, key []byte, payload interface{}, footer interface{}) error {
+func (*V2) Decrypt(token string, key []byte, payload interface{}, footer interface{}) error {
 	body, footerBytes, err := splitToken([]byte(token), headerV2)
 	if err != nil {
 		return errors.Wrap(err, "failed to decode token")
@@ -111,7 +112,7 @@ func (*PasetoV2) Decrypt(token string, key []byte, payload interface{}, footer i
 }
 
 // Sign implements Protocol.Sign
-func (*PasetoV2) Sign(privateKey crypto.PrivateKey, payload interface{}, footer interface{}) (string, error) {
+func (*V2) Sign(privateKey crypto.PrivateKey, payload interface{}, footer interface{}) (string, error) {
 	key, ok := privateKey.(ed25519.PrivateKey)
 	if !ok {
 		return "", ErrIncorrectPrivateKeyType
@@ -133,7 +134,7 @@ func (*PasetoV2) Sign(privateKey crypto.PrivateKey, payload interface{}, footer 
 }
 
 // Verify implements Protocol.Verify
-func (*PasetoV2) Verify(token string, publicKey crypto.PublicKey, payload interface{}, footer interface{}) error {
+func (*V2) Verify(token string, publicKey crypto.PublicKey, payload interface{}, footer interface{}) error {
 	pub, ok := publicKey.(ed25519.PublicKey)
 	if !ok {
 		return ErrIncorrectPublicKeyType

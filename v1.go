@@ -25,7 +25,8 @@ var headerV1Public = []byte("v1.public.")
 
 var tokenEncoder = base64.RawURLEncoding
 
-type PasetoV1 struct {
+// V1 is a v1 implementation of PASETO tokens
+type V1 struct {
 	// this property is used for testing purposes only
 	nonce []byte
 }
@@ -33,12 +34,12 @@ type PasetoV1 struct {
 // NewV1 returns a v1 implementation of PASETO tokens.
 // You should not use PASETO v1 unless you need interoperability with for legacy
 // systems that cannot use modern cryptography.
-func NewV1() *PasetoV1 {
-	return &PasetoV1{}
+func NewV1() *V1 {
+	return &V1{}
 }
 
 // Encrypt implements Protocol.Encrypt
-func (p *PasetoV1) Encrypt(key []byte, payload interface{}, footer interface{}) (string, error) {
+func (p *V1) Encrypt(key []byte, payload interface{}, footer interface{}) (string, error) {
 	payloadBytes, err := infToByteArr(payload)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to encode payload to []byte")
@@ -95,7 +96,7 @@ func (p *PasetoV1) Encrypt(key []byte, payload interface{}, footer interface{}) 
 }
 
 // Decrypt implements Protocol.Decrypt
-func (p *PasetoV1) Decrypt(token string, key []byte, payload interface{}, footer interface{}) error {
+func (p *V1) Decrypt(token string, key []byte, payload interface{}, footer interface{}) error {
 	data, footerBytes, err := splitToken([]byte(token), headerV1)
 	if err != nil {
 		return errors.Wrap(err, "failed to decode token")
@@ -146,7 +147,7 @@ func (p *PasetoV1) Decrypt(token string, key []byte, payload interface{}, footer
 }
 
 // Sign implements Protocol.Sign. privateKey should be of type *rsa.PrivateKey
-func (p *PasetoV1) Sign(privateKey crypto.PrivateKey, payload interface{}, footer interface{}) (string, error) {
+func (p *V1) Sign(privateKey crypto.PrivateKey, payload interface{}, footer interface{}) (string, error) {
 	rsaPrivateKey, ok := privateKey.(*rsa.PrivateKey)
 	if !ok {
 		return "", ErrIncorrectPrivateKeyType
@@ -183,7 +184,7 @@ func (p *PasetoV1) Sign(privateKey crypto.PrivateKey, payload interface{}, foote
 }
 
 // Verify implements Protocol.Verify. publicKey should be of type *rsa.PublicKey
-func (p *PasetoV1) Verify(token string, publicKey crypto.PublicKey, payload interface{}, footer interface{}) error {
+func (p *V1) Verify(token string, publicKey crypto.PublicKey, payload interface{}, footer interface{}) error {
 	rsaPublicKey, ok := publicKey.(*rsa.PublicKey)
 	if !ok {
 		return ErrIncorrectPublicKeyType
