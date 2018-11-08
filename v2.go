@@ -18,41 +18,32 @@ const (
 var headerV2 = []byte("v2.local.")
 var headerV2Public = []byte("v2.public.")
 
-// NewV2 returns a v1 implementation of PASETO tokens.
-func NewV2() Protocol {
-	return &pasetoV2{}
+// NewV2 returns a v2 implementation of PASETO tokens.
+func NewV2() *PasetoV2 {
+	return &PasetoV2{}
 }
 
-type pasetoV2 struct {
+type PasetoV2 struct {
+	// this property is used for testing purposes only
+	nonce []byte
 }
 
 // Encrypt implements Protocol.Encrypt
-func (*pasetoV2) Encrypt(key []byte, value interface{}, opParams ...opsFunc) (string, error) {
-	ops := options{}
-	for _, op := range opParams {
-		op(&ops)
-	}
-
-	var payload []byte
-	var footer []byte
-	var err error
-
-	payload, err = infToByteArr(value)
+func (p *PasetoV2) Encrypt(key []byte, payload interface{}, footer interface{}) (string, error) {
+	payloadBytes, err := infToByteArr(payload)
 	if err != nil {
 		return "", err
 	}
 
-	if ops.footer != nil {
-		footer, err = infToByteArr(ops.footer)
-		if err != nil {
-			return "", err
-		}
+	footerBytes, err := infToByteArr(footer)
+	if err != nil {
+		return "", err
 	}
 
 	var rndBytes []byte
 
-	if ops.nonce != nil {
-		rndBytes = ops.nonce
+	if p.nonce != nil {
+		rndBytes = p.nonce
 	} else {
 		rndBytes = make([]byte, chacha.XNonceSize)
 		if _, err := io.ReadFull(rand.Reader, rndBytes); err != nil {
@@ -64,7 +55,7 @@ func (*pasetoV2) Encrypt(key []byte, value interface{}, opParams ...opsFunc) (st
 	if err != nil {
 		return "", err
 	}
-	if _, err := hash.Write(payload); err != nil {
+	if _, err := hash.Write(payloadBytes); err != nil {
 		return "", err
 	}
 
@@ -75,13 +66,13 @@ func (*pasetoV2) Encrypt(key []byte, value interface{}, opParams ...opsFunc) (st
 		return "", err
 	}
 
-	encryptedPayload := aead.Seal(payload[:0], nonce, payload, preAuthEncode(headerV2, nonce, footer))
+	encryptedPayload := aead.Seal(payloadBytes[:0], nonce, payloadBytes, preAuthEncode(headerV2, nonce, footerBytes))
 
-	return createToken(headerV2, append(nonce, encryptedPayload...), footer), nil
+	return createToken(headerV2, append(nonce, encryptedPayload...), footerBytes), nil
 }
 
 // Decrypt implements Protocol.Decrypt
-func (*pasetoV2) Decrypt(token string, key []byte, payload interface{}, footer interface{}) error {
+func (*PasetoV2) Decrypt(token string, key []byte, payload interface{}, footer interface{}) error {
 	body, footerBytes, err := splitToken([]byte(token), headerV2)
 	if err != nil {
 		return err
@@ -119,40 +110,29 @@ func (*pasetoV2) Decrypt(token string, key []byte, payload interface{}, footer i
 }
 
 // Sign implements Protocol.Sign
-func (*pasetoV2) Sign(privateKey crypto.PrivateKey, value interface{}, params ...opsFunc) (string, error) {
+func (*PasetoV2) Sign(privateKey crypto.PrivateKey, payload interface{}, footer interface{}) (string, error) {
 	priv, ok := privateKey.(ed25519.PrivateKey)
 	if !ok {
 		return "", ErrIncorrectPrivateKeyType
 	}
 
-	ops := options{}
-	for _, op := range params {
-		op(&ops)
-	}
-
-	var payload []byte
-	var footer []byte
-	var err error
-
-	payload, err = infToByteArr(value)
+	payloadBytes, err := infToByteArr(payload)
 	if err != nil {
 		return "", err
 	}
 
-	if ops.footer != nil {
-		footer, err = infToByteArr(ops.footer)
-		if err != nil {
-			return "", err
-		}
+	footerBytes, err := infToByteArr(footer)
+	if err != nil {
+		return "", err
 	}
 
-	sig := ed25519.Sign(priv, preAuthEncode(headerV2Public, payload, footer))
+	sig := ed25519.Sign(priv, preAuthEncode(headerV2Public, payloadBytes, footerBytes))
 
-	return createToken(headerV2Public, append(payload, sig...), footer), nil
+	return createToken(headerV2Public, append(payloadBytes, sig...), footerBytes), nil
 }
 
-// Decrypt implements Protocol.Verify
-func (*pasetoV2) Verify(token string, publicKey crypto.PublicKey, value interface{}, footer interface{}) error {
+// Verify implements Protocol.Verify
+func (*PasetoV2) Verify(token string, publicKey crypto.PublicKey, payload interface{}, footer interface{}) error {
 	pub, ok := publicKey.(ed25519.PublicKey)
 	if !ok {
 		return ErrIncorrectPublicKeyType
@@ -167,15 +147,15 @@ func (*pasetoV2) Verify(token string, publicKey crypto.PublicKey, value interfac
 		return ErrIncorrectTokenFormat
 	}
 
-	payload := data[:len(data)-v2SignSize]
-	signatute := data[len(data)-v2SignSize:]
+	payloadBytes := data[:len(data)-v2SignSize]
+	signature := data[len(data)-v2SignSize:]
 
-	if !ed25519.Verify(pub, preAuthEncode(headerV2Public, payload, footerBytes), signatute) {
+	if !ed25519.Verify(pub, preAuthEncode(headerV2Public, payloadBytes, footerBytes), signature) {
 		return ErrInvalidSignature
 	}
 
-	if value != nil {
-		if err := fillValue(payload, value); err != nil {
+	if payload != nil {
+		if err := fillValue(payloadBytes, payload); err != nil {
 			return err
 		}
 	}

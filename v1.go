@@ -23,43 +23,34 @@ var headerV1Public = []byte("v1.public.")
 
 var tokenEncoder = base64.RawURLEncoding
 
-type pasetoV1 struct {
+type PasetoV1 struct {
+	// this property is used for testing purposes only
+	nonce []byte
 }
 
 // NewV1 returns a v1 implementation of PASETO tokens.
 // You should not use PASETO v1 unless you need interoperability with for legacy
 // systems that cannot use modern cryptography.
-func NewV1() Protocol {
-	return &pasetoV1{}
+func NewV1() *PasetoV1 {
+	return &PasetoV1{}
 }
 
 // Encrypt implements Protocol.Encrypt
-func (p *pasetoV1) Encrypt(key []byte, value interface{}, ops ...opsFunc) (string, error) {
-	options := options{}
-	for _, op := range ops {
-		op(&options)
-	}
-
-	var payload []byte
-	var footer []byte
-	var err error
-
-	payload, err = infToByteArr(value)
+func (p *PasetoV1) Encrypt(key []byte, payload interface{}, footer interface{}) (string, error) {
+	payloadBytes, err := infToByteArr(payload)
 	if err != nil {
 		return "", err
 	}
 
-	if options.footer != nil {
-		footer, err = infToByteArr(options.footer)
-		if err != nil {
-			return "", err
-		}
+	footerBytes, err := infToByteArr(footer)
+	if err != nil {
+		return "", err
 	}
 
 	var rndBytes []byte
 
-	if options.nonce != nil {
-		rndBytes = options.nonce
+	if p.nonce != nil {
+		rndBytes = p.nonce
 	} else {
 		rndBytes = make([]byte, nonceSize)
 		if _, err := io.ReadFull(rand.Reader, rndBytes); err != nil {
@@ -68,7 +59,7 @@ func (p *pasetoV1) Encrypt(key []byte, value interface{}, ops ...opsFunc) (strin
 	}
 
 	macN := hmac.New(sha512.New384, rndBytes)
-	if _, err := macN.Write(payload); err != nil {
+	if _, err := macN.Write(payloadBytes); err != nil {
 		return "", err
 	}
 	nonce := macN.Sum(nil)[:32]
@@ -83,11 +74,11 @@ func (p *pasetoV1) Encrypt(key []byte, value interface{}, ops ...opsFunc) (strin
 		return "", err
 	}
 
-	encryptedPayload := make([]byte, len(payload))
-	cipher.NewCTR(block, nonce[16:]).XORKeyStream(encryptedPayload, payload)
+	encryptedPayload := make([]byte, len(payloadBytes))
+	cipher.NewCTR(block, nonce[16:]).XORKeyStream(encryptedPayload, payloadBytes)
 
 	h := hmac.New(sha512.New384, authKey)
-	if _, err := h.Write(preAuthEncode(headerV1, nonce, encryptedPayload, footer)); err != nil {
+	if _, err := h.Write(preAuthEncode(headerV1, nonce, encryptedPayload, footerBytes)); err != nil {
 		return "", err
 	}
 
@@ -98,11 +89,11 @@ func (p *pasetoV1) Encrypt(key []byte, value interface{}, ops ...opsFunc) (strin
 	body = append(body, encryptedPayload...)
 	body = append(body, mac...)
 
-	return createToken(headerV1, body, footer), nil
+	return createToken(headerV1, body, footerBytes), nil
 }
 
-// Encrypt implements Protocol.Decrypt
-func (p *pasetoV1) Decrypt(token string, key []byte, value interface{}, footer interface{}) error {
+// Decrypt implements Protocol.Decrypt
+func (p *PasetoV1) Decrypt(token string, key []byte, payload interface{}, footer interface{}) error {
 	data, footerBytes, err := splitToken([]byte(token), headerV1)
 	if err != nil {
 		return err
@@ -137,8 +128,8 @@ func (p *pasetoV1) Decrypt(token string, key []byte, value interface{}, footer i
 	decryptedPayload := make([]byte, len(encryptedPayload))
 	cipher.NewCTR(block, nonce[16:]).XORKeyStream(decryptedPayload, encryptedPayload)
 
-	if value != nil {
-		if err := fillValue(decryptedPayload, value); err != nil {
+	if payload != nil {
+		if err := fillValue(decryptedPayload, payload); err != nil {
 			return err
 		}
 	}
@@ -152,53 +143,43 @@ func (p *pasetoV1) Decrypt(token string, key []byte, value interface{}, footer i
 	return nil
 }
 
-// Encrypt implements Protocol.Sign. privateKey should be of type *rsa.PrivateKey
-func (p *pasetoV1) Sign(privateKey crypto.PrivateKey, value interface{}, params ...opsFunc) (string, error) {
+// Sign implements Protocol.Sign. privateKey should be of type *rsa.PrivateKey
+func (p *PasetoV1) Sign(privateKey crypto.PrivateKey, payload interface{}, footer interface{}) (string, error) {
 	rsaPrivateKey, ok := privateKey.(*rsa.PrivateKey)
 	if !ok {
 		return "", ErrIncorrectPrivateKeyType
 	}
-	ops := options{}
-	for _, op := range params {
-		op(&ops)
-	}
 
-	var payload []byte
-	var footer []byte
-	var err error
-
-	payload, err = infToByteArr(value)
+	payloadBytes, err := infToByteArr(payload)
 	if err != nil {
 		return "", err
 	}
 
-	if ops.footer != nil {
-		footer, err = infToByteArr(ops.footer)
-		if err != nil {
-			return "", err
-		}
+	footerBytes, err := infToByteArr(footer)
+	if err != nil {
+		return "", err
 	}
 
 	var opts rsa.PSSOptions
 	opts.SaltLength = rsa.PSSSaltLengthEqualsHash
-	PSSmessage := preAuthEncode(headerV1Public, payload, footer)
-	newhash := crypto.SHA384
-	pssh := newhash.New()
-	pssh.Write(PSSmessage)
-	hashed := pssh.Sum(nil)
+	PSSMessage := preAuthEncode(headerV1Public, payloadBytes, footerBytes)
+	sha384 := crypto.SHA384
+	pssHash := sha384.New()
+	pssHash.Write(PSSMessage)
+	hashed := pssHash.Sum(nil)
 
-	signature, err := rsa.SignPSS(rand.Reader, rsaPrivateKey, newhash, hashed, &opts)
+	signature, err := rsa.SignPSS(rand.Reader, rsaPrivateKey, sha384, hashed, &opts)
 	if err != nil {
 		panic(err)
 	}
 
-	body := append(payload, signature...)
+	body := append(payloadBytes, signature...)
 
-	return createToken(headerV1Public, body, footer), nil
+	return createToken(headerV1Public, body, footerBytes), nil
 }
 
-// Encrypt implements Protocol.Verify. publicKey should be of type *rsa.PublicKey
-func (p *pasetoV1) Verify(token string, publicKey crypto.PublicKey, value interface{}, footer interface{}) error {
+// Verify implements Protocol.Verify. publicKey should be of type *rsa.PublicKey
+func (p *PasetoV1) Verify(token string, publicKey crypto.PublicKey, payload interface{}, footer interface{}) error {
 	rsaPublicKey, ok := publicKey.(*rsa.PublicKey)
 	if !ok {
 		return ErrIncorrectPublicKeyType
@@ -213,23 +194,23 @@ func (p *pasetoV1) Verify(token string, publicKey crypto.PublicKey, value interf
 		return ErrIncorrectTokenFormat
 	}
 
-	payload := data[:len(data)-v1SignSize]
+	payloadBytes := data[:len(data)-v1SignSize]
 	signature := data[len(data)-v1SignSize:]
 
 	var opts rsa.PSSOptions
 	opts.SaltLength = rsa.PSSSaltLengthEqualsHash
-	PSSmessage := preAuthEncode(headerV1Public, payload, footerBytes)
-	newhash := crypto.SHA384
-	pssh := newhash.New()
-	pssh.Write(PSSmessage)
-	hashed := pssh.Sum(nil)
+	PSSMessage := preAuthEncode(headerV1Public, payloadBytes, footerBytes)
+	sha384 := crypto.SHA384
+	pssHash := sha384.New()
+	pssHash.Write(PSSMessage)
+	hashed := pssHash.Sum(nil)
 
-	if err = rsa.VerifyPSS(rsaPublicKey, newhash, hashed, signature, &opts); err != nil {
+	if err = rsa.VerifyPSS(rsaPublicKey, sha384, hashed, signature, &opts); err != nil {
 		return ErrInvalidSignature
 	}
 
-	if value != nil {
-		if err := fillValue(payload, value); err != nil {
+	if payload != nil {
+		if err := fillValue(payloadBytes, payload); err != nil {
 			return err
 		}
 	}

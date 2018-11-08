@@ -155,11 +155,8 @@ func TestPasetoV1_Encrypt_Compatibility(t *testing.T) {
 
 	for name, test := range cases {
 		t.Run(name, func(t *testing.T) {
-			options := []opsFunc{withNonce(test.nonce)}
-			if test.footer != nil {
-				options = append(options, WithFooter(test.footer))
-			}
-			if token, err := v1.Encrypt(test.key, test.payload, options...); assert.NoError(t, err) {
+			v1.nonce = test.nonce
+			if token, err := v1.Encrypt(test.key, test.payload, test.footer); assert.NoError(t, err) {
 				assert.Equal(t, test.token, token)
 			}
 		})
@@ -337,7 +334,7 @@ func TestPasetoV1_Sign_Error(t *testing.T) {
 
 	for name, test := range cases {
 		t.Run(name, func(t *testing.T) {
-			_, err := v1.Sign(test.key, test.payload, WithFooter(test.footer))
+			_, err := v1.Sign(test.key, test.payload, test.footer)
 			assert.EqualError(t, err, test.err.Error())
 		})
 	}

@@ -43,7 +43,7 @@ func testEncryptDecrypt(t *testing.T, impl Protocol) {
 
 	for name, test := range cases {
 		t.Run(name, func(t *testing.T) {
-			if token, err := impl.Encrypt(key, test.payload, WithFooter(test.footer)); assert.NoError(t, err) {
+			if token, err := impl.Encrypt(key, test.payload, test.footer); assert.NoError(t, err) {
 				if err := impl.Decrypt(token, key, test.obtainedPayload, test.obtainedFooter); assert.NoError(t, err) {
 					assert.Equal(t, test.payload, test.obtainedPayload)
 					assert.EqualValues(t, test.footer, test.obtainedFooter)
@@ -55,7 +55,7 @@ func testEncryptDecrypt(t *testing.T, impl Protocol) {
 	t.Run("non pointer string payload and footer", func(t *testing.T) {
 		payload := "payload"
 		footer := "footer"
-		if token, err := impl.Encrypt(key, payload, WithFooter(footer)); assert.NoError(t, err) {
+		if token, err := impl.Encrypt(key, payload, footer); assert.NoError(t, err) {
 			var obtainedPayload string
 			var obtainedFooter string
 			if err := impl.Decrypt(token, key, &obtainedPayload, &obtainedFooter); assert.NoError(t, err) {
@@ -88,11 +88,7 @@ func testSign(t *testing.T, impl Protocol, privateKey crypto.PrivateKey, publicK
 
 	for name, test := range cases {
 		t.Run(name, func(t *testing.T) {
-			var ops []opsFunc
-			if test.footer != nil {
-				ops = append(ops, WithFooter(test.footer))
-			}
-			if token, err := impl.Sign(privateKey, test.payload, ops...); assert.NoError(t, err) {
+			if token, err := impl.Sign(privateKey, test.payload, test.footer); assert.NoError(t, err) {
 				var obtainedPayload = ptrOf(test.payload)
 				var obtainedFooter = ptrOf(test.footer)
 				if assert.NoError(t, impl.Verify(token, publicKey, obtainedPayload, obtainedFooter)) {

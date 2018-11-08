@@ -31,7 +31,7 @@ func Benchmark_V2_JSONToken_Encrypt(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		v2.Encrypt(symmetricKey, jsonToken, WithFooter(footer))
+		v2.Encrypt(symmetricKey, jsonToken, footer)
 	}
 }
 
@@ -74,7 +74,7 @@ func Benchmark_V2_JSONToken_Sign(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		v2.Sign(privateKey, jsonToken, WithFooter(footer))
+		v2.Sign(privateKey, jsonToken, footer)
 	}
 }
 
@@ -104,7 +104,7 @@ func Benchmark_V2_String_Encrypt(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		v2.Encrypt(symmetricKey, payload, WithFooter(footer))
+		v2.Encrypt(symmetricKey, payload, footer)
 	}
 }
 
@@ -135,7 +135,7 @@ func Benchmark_V2_String_Sign(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		v2.Sign(privateKey, payload, WithFooter(footer))
+		v2.Sign(privateKey, payload, footer)
 	}
 }
 

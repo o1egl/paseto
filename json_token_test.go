@@ -29,7 +29,7 @@ func TestJsonToken(t *testing.T) {
 
 	v2 := NewV2()
 
-	if token, err := v2.Encrypt(symmetricKey, jsonToken); assert.NoError(t, err) {
+	if token, err := v2.Encrypt(symmetricKey, jsonToken, nil); assert.NoError(t, err) {
 		var obtainedToken JSONToken
 		if err := v2.Decrypt(token, symmetricKey, &obtainedToken, nil); assert.NoError(t, err) {
 			assert.NoError(t, obtainedToken.Validate())
