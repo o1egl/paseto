@@ -87,7 +87,7 @@ footer := "some footer"
 v2 := paseto.NewV2()
 
 // Encrypt data
-token, err := v2.Encrypt(symmetricKey, jsonToken, paseto.WithFooter(footer))
+token, err := v2.Encrypt(symmetricKey, jsonToken, footer)
 // token = "v2.local.E42A2iMY9SaZVzt-WkCi45_aebky4vbSUJsfG45OcanamwXwieieMjSjUkgsyZzlbYt82miN1xD-X0zEIhLK_RhWUPLZc9nC0shmkkkHS5Exj2zTpdNWhrC5KJRyUrI0cupc5qrctuREFLAvdCgwZBjh1QSgBX74V631fzl1IErGBgnt2LV1aij5W3hw9cXv4gtm_jSwsfee9HZcCE0sgUgAvklJCDO__8v_fTY7i_Regp5ZPa7h0X0m3yf0n4OXY9PRplunUpD9uEsXJ_MTF5gSFR3qE29eCHbJtRt0FFl81x-GCsQ9H9701TzEjGehCC6Bhw.c29tZSBmb290ZXI"
 
 // Decrypt data
@@ -118,7 +118,7 @@ footer := "some footer"
 v2 := paseto.NewV2()
 
 // Sign data
-token, err := v2.Sign(privateKey, jsonToken, paseto.WithFooter(footer))
+token, err := v2.Sign(privateKey, jsonToken, footer)
 // token = "v2.public.eyJkYXRhIjoidGhpcyBpcyBhIHNpZ25lZCBtZXNzYWdlIiwiZXhwIjoiMjAxOC0wMy0xMlQxOTowODo1NCswMTowMCJ9Ojv0uXlUNXSFhR88KXb568LheLRdeGy2oILR3uyOM_-b7r7i_fX8aljFYUiF-MRr5IRHMBcWPtM0fmn9SOd6Aw.c29tZSBmb290ZXI"
 
 // Verify data
@@ -133,18 +133,18 @@ For more information see *_test.go files.
 MacBook Pro (Retina, 15-inch, Late 2013)
 CPU: 2,3 GHz Intel Core i7
 RAM: 16 GB 1600 MHz DDR3
-OS: macOS 10.13.3
-GO: 1.10
+OS: macOS 10.14.1
+GO: 1.11.2
 ```
 $ go test -bench . -benchmem
 
-Benchmark_V2_JSONToken_Encrypt-8          100000             11729 ns/op            5808 B/op         63 allocs/op
-Benchmark_V2_JSONToken_Decrypt-8          100000             11795 ns/op            3104 B/op         61 allocs/op
-Benchmark_V2_JSONToken_Sign-8              20000             71034 ns/op            5136 B/op         60 allocs/op
-Benchmark_V2_JSONToken_Verify-8            10000            167387 ns/op            2672 B/op         58 allocs/op
-Benchmark_V2_String_Encrypt-8             300000              4295 ns/op            2240 B/op         32 allocs/op
+Benchmark_V2_JSONToken_Encrypt-8          100000             11306 ns/op            5034 B/op         57 allocs/op
+Benchmark_V2_JSONToken_Decrypt-8          100000             11795 ns/op            2848 B/op         60 allocs/op
+Benchmark_V2_JSONToken_Sign-8              20000             71034 ns/op            4361 B/op         54 allocs/op
+Benchmark_V2_JSONToken_Verify-8            10000            167387 ns/op            2416 B/op         57 allocs/op
+Benchmark_V2_String_Encrypt-8             300000              3365 ns/op            2152 B/op         29 allocs/op
 Benchmark_V2_String_Decrypt-8            1000000              1854 ns/op            1512 B/op         22 allocs/op
-Benchmark_V2_String_Sign-8                 20000             60374 ns/op            1296 B/op         28 allocs/op
+Benchmark_V2_String_Sign-8                 20000             60374 ns/op            1208 B/op         25 allocs/op
 Benchmark_V2_String_Verify-8               10000            156859 ns/op             776 B/op         18 allocs/op
 ```
 
