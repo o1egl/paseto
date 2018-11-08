@@ -10,6 +10,8 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"io"
+
+	"github.com/pkg/errors"
 )
 
 const (
@@ -39,12 +41,12 @@ func NewV1() *PasetoV1 {
 func (p *PasetoV1) Encrypt(key []byte, payload interface{}, footer interface{}) (string, error) {
 	payloadBytes, err := infToByteArr(payload)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "failed to encode payload to []byte")
 	}
 
 	footerBytes, err := infToByteArr(footer)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "failed to encode footer to []byte")
 	}
 
 	var rndBytes []byte
@@ -54,24 +56,24 @@ func (p *PasetoV1) Encrypt(key []byte, payload interface{}, footer interface{}) 
 	} else {
 		rndBytes = make([]byte, nonceSize)
 		if _, err := io.ReadFull(rand.Reader, rndBytes); err != nil {
-			return "", err
+			return "", errors.Wrap(err, "failed to read from rand.Reader")
 		}
 	}
 
 	macN := hmac.New(sha512.New384, rndBytes)
 	if _, err := macN.Write(payloadBytes); err != nil {
-		return "", err
+		return "", errors.Wrap(err, "failed to hash payload")
 	}
 	nonce := macN.Sum(nil)[:32]
 
 	encKey, authKey, err := splitKey(key, nonce[:16])
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "failed to create enc and auth keys")
 	}
 
 	block, err := aes.NewCipher(encKey)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "failed to create aes cipher")
 	}
 
 	encryptedPayload := make([]byte, len(payloadBytes))
@@ -79,7 +81,7 @@ func (p *PasetoV1) Encrypt(key []byte, payload interface{}, footer interface{}) 
 
 	h := hmac.New(sha512.New384, authKey)
 	if _, err := h.Write(preAuthEncode(headerV1, nonce, encryptedPayload, footerBytes)); err != nil {
-		return "", err
+		return "", errors.Wrap(err, "failed to create a signature")
 	}
 
 	mac := h.Sum(nil)
@@ -96,7 +98,7 @@ func (p *PasetoV1) Encrypt(key []byte, payload interface{}, footer interface{}) 
 func (p *PasetoV1) Decrypt(token string, key []byte, payload interface{}, footer interface{}) error {
 	data, footerBytes, err := splitToken([]byte(token), headerV1)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to decode token")
 	}
 
 	if len(data) < nonceSize+macSize {
@@ -109,34 +111,34 @@ func (p *PasetoV1) Decrypt(token string, key []byte, payload interface{}, footer
 
 	encKey, authKey, err := splitKey(key, nonce[:16])
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to create enc and auth keys")
 	}
 
 	h := hmac.New(sha512.New384, authKey)
 	if _, err := h.Write(preAuthEncode(headerV1, nonce, encryptedPayload, footerBytes)); err != nil {
-		return err
+		return errors.Wrap(err, "failed to create a signature")
 	}
 
 	if !hmac.Equal(h.Sum(nil), mac) {
-		return ErrInvalidTokenAuth
+		return errors.Wrap(ErrInvalidTokenAuth, "failed to check token signature")
 	}
 
 	block, err := aes.NewCipher(encKey)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to create aes cipher")
 	}
 	decryptedPayload := make([]byte, len(encryptedPayload))
 	cipher.NewCTR(block, nonce[16:]).XORKeyStream(decryptedPayload, encryptedPayload)
 
 	if payload != nil {
 		if err := fillValue(decryptedPayload, payload); err != nil {
-			return err
+			return errors.Wrap(err, "failed to decode payload")
 		}
 	}
 
 	if footer != nil {
 		if err := fillValue(footerBytes, footer); err != nil {
-			return err
+			return errors.Wrap(err, "failed to decode footer")
 		}
 	}
 
@@ -152,12 +154,12 @@ func (p *PasetoV1) Sign(privateKey crypto.PrivateKey, payload interface{}, foote
 
 	payloadBytes, err := infToByteArr(payload)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "failed to encode payload to []byte")
 	}
 
 	footerBytes, err := infToByteArr(footer)
 	if err != nil {
-		return "", err
+		return "", errors.Wrap(err, "failed to encode footer to []byte")
 	}
 
 	var opts rsa.PSSOptions
@@ -165,12 +167,14 @@ func (p *PasetoV1) Sign(privateKey crypto.PrivateKey, payload interface{}, foote
 	PSSMessage := preAuthEncode(headerV1Public, payloadBytes, footerBytes)
 	sha384 := crypto.SHA384
 	pssHash := sha384.New()
-	pssHash.Write(PSSMessage)
+	if _, err := pssHash.Write(PSSMessage); err != nil {
+		return "", errors.Wrap(err, "failed to create pss hash")
+	}
 	hashed := pssHash.Sum(nil)
 
 	signature, err := rsa.SignPSS(rand.Reader, rsaPrivateKey, sha384, hashed, &opts)
 	if err != nil {
-		panic(err)
+		return "", errors.Wrap(err, "failed to sign token")
 	}
 
 	body := append(payloadBytes, signature...)
@@ -187,11 +191,11 @@ func (p *PasetoV1) Verify(token string, publicKey crypto.PublicKey, payload inte
 
 	data, footerBytes, err := splitToken([]byte(token), headerV1Public)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to decode token")
 	}
 
 	if len(data) < v1SignSize {
-		return ErrIncorrectTokenFormat
+		return errors.Wrap(ErrIncorrectTokenFormat, "incorrect signature size")
 	}
 
 	payloadBytes := data[:len(data)-v1SignSize]
@@ -202,7 +206,9 @@ func (p *PasetoV1) Verify(token string, publicKey crypto.PublicKey, payload inte
 	PSSMessage := preAuthEncode(headerV1Public, payloadBytes, footerBytes)
 	sha384 := crypto.SHA384
 	pssHash := sha384.New()
-	pssHash.Write(PSSMessage)
+	if _, err := pssHash.Write(PSSMessage); err != nil {
+		return errors.Wrap(err, "failed to create pss hash")
+	}
 	hashed := pssHash.Sum(nil)
 
 	if err = rsa.VerifyPSS(rsaPublicKey, sha384, hashed, signature, &opts); err != nil {
@@ -211,13 +217,13 @@ func (p *PasetoV1) Verify(token string, publicKey crypto.PublicKey, payload inte
 
 	if payload != nil {
 		if err := fillValue(payloadBytes, payload); err != nil {
-			return err
+			return errors.Wrap(err, "failed to decode payload")
 		}
 	}
 
 	if footer != nil {
 		if err := fillValue(footerBytes, footer); err != nil {
-			return err
+			return errors.Wrap(err, "failed to decode footer")
 		}
 	}
 

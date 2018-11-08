@@ -5,6 +5,8 @@ package paseto
 import (
 	"crypto"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 // Version defines the token version.
@@ -71,9 +73,9 @@ func ParseFooter(token string, footer interface{}) error {
 	if len(parts) == 4 {
 		b, err := tokenEncoder.DecodeString(parts[3])
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to decode token")
 		}
-		return fillValue(b, footer)
+		return errors.Wrap(fillValue(b, footer), "failed to decode footer")
 	}
 	if len(parts) < 3 {
 		return ErrIncorrectTokenFormat

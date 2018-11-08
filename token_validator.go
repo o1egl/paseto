@@ -1,9 +1,9 @@
 package paseto
 
 import (
-	"errors"
-	"fmt"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 // Validator defines a JSONToken validator function.
@@ -13,7 +13,7 @@ type Validator func(token *JSONToken) error
 func ForAudience(audience string) Validator {
 	return func(token *JSONToken) error {
 		if token.Audience != audience {
-			return fmt.Errorf(`token was not intended for "%s" audience`, audience)
+			return errors.Wrapf(ErrTokenValidationError, `token was not intended for "%s" audience`, audience)
 		}
 		return nil
 	}
@@ -23,7 +23,7 @@ func ForAudience(audience string) Validator {
 func IdentifiedBy(jti string) Validator {
 	return func(token *JSONToken) error {
 		if token.Jti != jti {
-			return fmt.Errorf(`token was expected to be identified by "%s"`, jti)
+			return errors.Wrapf(ErrTokenValidationError, `token was expected to be identified by "%s"`, jti)
 		}
 		return nil
 	}
@@ -33,7 +33,7 @@ func IdentifiedBy(jti string) Validator {
 func IssuedBy(issuer string) Validator {
 	return func(token *JSONToken) error {
 		if token.Issuer != issuer {
-			return fmt.Errorf(`token was not issued by "%s"`, issuer)
+			return errors.Wrapf(ErrTokenValidationError, `token was not issued by "%s"`, issuer)
 		}
 		return nil
 	}
@@ -43,7 +43,7 @@ func IssuedBy(issuer string) Validator {
 func Subject(subject string) Validator {
 	return func(token *JSONToken) error {
 		if token.Subject != subject {
-			return fmt.Errorf(`token was not related to subject "%s"`, subject)
+			return errors.Wrapf(ErrTokenValidationError, `token was not related to subject "%s"`, subject)
 		}
 		return nil
 	}
@@ -54,13 +54,13 @@ func Subject(subject string) Validator {
 func ValidAt(t time.Time) Validator {
 	return func(token *JSONToken) error {
 		if !token.IssuedAt.IsZero() && t.Before(token.IssuedAt) {
-			return errors.New("token was issued in the future")
+			return errors.Wrapf(ErrTokenValidationError, "token was issued in the future")
 		}
 		if !token.NotBefore.IsZero() && t.Before(token.NotBefore) {
-			return errors.New("token cannot be used yet")
+			return errors.Wrapf(ErrTokenValidationError, "token cannot be used yet")
 		}
 		if !token.Expiration.IsZero() && t.After(token.Expiration) {
-			return errors.New("token has expired")
+			return errors.Wrapf(ErrTokenValidationError, "token has expired")
 		}
 		return nil
 	}

@@ -9,6 +9,7 @@ import (
 	"encoding/pem"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -308,7 +309,8 @@ func TestPasetoV1_Decrypt_Error(t *testing.T) {
 
 	for name, test := range cases {
 		t.Run(name, func(t *testing.T) {
-			assert.EqualError(t, v1.Decrypt(test.token, symmetricKey, test.payload, test.footer), test.error.Error())
+			err := v1.Decrypt(test.token, symmetricKey, test.payload, test.footer)
+			assert.Equal(t, test.error, errors.Cause(err))
 		})
 	}
 }
@@ -374,7 +376,8 @@ func TestPasetoV1_Verify_Error(t *testing.T) {
 
 	for name, test := range cases {
 		t.Run(name, func(t *testing.T) {
-			assert.EqualError(t, v1.Verify(test.token, rsaPublicKey, test.payload, test.footer), test.error.Error())
+			err := v1.Verify(test.token, rsaPublicKey, test.payload, test.footer)
+			assert.Equal(t, test.error, errors.Cause(err))
 		})
 	}
 }

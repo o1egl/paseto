@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"io"
 
+	"github.com/pkg/errors"
 	"golang.org/x/crypto/hkdf"
 )
 
@@ -66,13 +67,13 @@ func splitToken(token []byte, header []byte) (payload []byte, footer []byte, err
 
 	payload = make([]byte, tokenEncoder.DecodedLen(len(encodedPayload)))
 	if _, err = tokenEncoder.Decode(payload, encodedPayload); err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrap(err, "failed to decode payload")
 	}
 
 	if encodedFooter != nil {
 		footer = make([]byte, tokenEncoder.DecodedLen(len(encodedFooter)))
 		if _, err = tokenEncoder.Decode(footer, encodedFooter); err != nil {
-			return nil, nil, err
+			return nil, nil, errors.Wrap(err, "failed to decode footer")
 		}
 	}
 

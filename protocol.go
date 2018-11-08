@@ -26,6 +26,8 @@ var (
 	ErrInvalidSignature = errors.New("invalid signature")
 	// ErrDataUnmarshal can't unmarshal token data to the given type of value
 	ErrDataUnmarshal = errors.New("can't unmarshal token data to the given type of value")
+	// ErrTokenValidationError invalid token data
+	ErrTokenValidationError = errors.New("token validation error")
 )
 
 // Protocol defines the PASETO token protocol interface.

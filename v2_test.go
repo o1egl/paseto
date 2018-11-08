@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/crypto/ed25519"
 )
@@ -234,7 +235,8 @@ func TestPasetoV2_Verify_Error(t *testing.T) {
 
 	for name, test := range cases {
 		t.Run(name, func(t *testing.T) {
-			assert.EqualError(t, v2.Verify(test.token, test.publicKey, test.payload, test.footer), test.error.Error())
+			err := v2.Verify(test.token, test.publicKey, test.payload, test.footer)
+			assert.Equal(t, test.error, errors.Cause(err))
 		})
 	}
 }
@@ -289,7 +291,8 @@ func TestPasetoV2_Decrypt_Error(t *testing.T) {
 
 	for name, test := range cases {
 		t.Run(name, func(t *testing.T) {
-			assert.EqualError(t, v2.Decrypt(test.token, symmetricKey, test.payload, test.footer), test.error.Error())
+			err := v2.Decrypt(test.token, symmetricKey, test.payload, test.footer)
+			assert.Equal(t, test.error, errors.Cause(err))
 		})
 	}
 }
