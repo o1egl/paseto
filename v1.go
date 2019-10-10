@@ -9,9 +9,8 @@ import (
 	"crypto/rsa"
 	"crypto/sha512"
 	"encoding/base64"
+	"fmt"
 	"io"
-
-	"github.com/pkg/errors"
 )
 
 const (
@@ -42,12 +41,12 @@ func NewV1() *V1 {
 func (p *V1) Encrypt(key []byte, payload interface{}, footer interface{}) (string, error) {
 	payloadBytes, err := infToByteArr(payload)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to encode payload to []byte")
+		return "", fmt.Errorf("failed to encode payload to []byte: %w", err)
 	}
 
 	footerBytes, err := infToByteArr(footer)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to encode footer to []byte")
+		return "", fmt.Errorf("failed to encode footer to []byte: %w", err)
 	}
 
 	var rndBytes []byte
@@ -57,24 +56,24 @@ func (p *V1) Encrypt(key []byte, payload interface{}, footer interface{}) (strin
 	} else {
 		rndBytes = make([]byte, nonceSize)
 		if _, err := io.ReadFull(rand.Reader, rndBytes); err != nil {
-			return "", errors.Wrap(err, "failed to read from rand.Reader")
+			return "", fmt.Errorf("failed to read from rand.Reader: %w", err)
 		}
 	}
 
 	macN := hmac.New(sha512.New384, rndBytes)
 	if _, err := macN.Write(payloadBytes); err != nil {
-		return "", errors.Wrap(err, "failed to hash payload")
+		return "", fmt.Errorf("failed to hash payload: %w", err)
 	}
 	nonce := macN.Sum(nil)[:32]
 
 	encKey, authKey, err := splitKey(key, nonce[:16])
 	if err != nil {
-		return "", errors.Wrap(err, "failed to create enc and auth keys")
+		return "", fmt.Errorf("failed to create enc and auth keys: %w", err)
 	}
 
 	block, err := aes.NewCipher(encKey)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to create aes cipher")
+		return "", fmt.Errorf("failed to create aes cipher: %w", err)
 	}
 
 	encryptedPayload := make([]byte, len(payloadBytes))
@@ -82,7 +81,7 @@ func (p *V1) Encrypt(key []byte, payload interface{}, footer interface{}) (strin
 
 	h := hmac.New(sha512.New384, authKey)
 	if _, err := h.Write(preAuthEncode(headerV1, nonce, encryptedPayload, footerBytes)); err != nil {
-		return "", errors.Wrap(err, "failed to create a signature")
+		return "", fmt.Errorf("failed to create a signature: %w", err)
 	}
 
 	mac := h.Sum(nil)
@@ -99,7 +98,7 @@ func (p *V1) Encrypt(key []byte, payload interface{}, footer interface{}) (strin
 func (p *V1) Decrypt(token string, key []byte, payload interface{}, footer interface{}) error {
 	data, footerBytes, err := splitToken([]byte(token), headerV1)
 	if err != nil {
-		return errors.Wrap(err, "failed to decode token")
+		return fmt.Errorf("failed to decode token: %w", err)
 	}
 
 	if len(data) < nonceSize+macSize {
@@ -112,34 +111,34 @@ func (p *V1) Decrypt(token string, key []byte, payload interface{}, footer inter
 
 	encKey, authKey, err := splitKey(key, nonce[:16])
 	if err != nil {
-		return errors.Wrap(err, "failed to create enc and auth keys")
+		return fmt.Errorf("failed to create enc and auth keys: %w", err)
 	}
 
 	h := hmac.New(sha512.New384, authKey)
 	if _, err := h.Write(preAuthEncode(headerV1, nonce, encryptedPayload, footerBytes)); err != nil {
-		return errors.Wrap(err, "failed to create a signature")
+		return fmt.Errorf("failed to create a signature: %w", err)
 	}
 
 	if !hmac.Equal(h.Sum(nil), mac) {
-		return errors.Wrap(ErrInvalidTokenAuth, "failed to check token signature")
+		return fmt.Errorf("failed to check token signature: %w", ErrInvalidTokenAuth)
 	}
 
 	block, err := aes.NewCipher(encKey)
 	if err != nil {
-		return errors.Wrap(err, "failed to create aes cipher")
+		return fmt.Errorf("failed to create aes cipher: %w", err)
 	}
 	decryptedPayload := make([]byte, len(encryptedPayload))
 	cipher.NewCTR(block, nonce[16:]).XORKeyStream(decryptedPayload, encryptedPayload)
 
 	if payload != nil {
 		if err := fillValue(decryptedPayload, payload); err != nil {
-			return errors.Wrap(err, "failed to decode payload")
+			return fmt.Errorf("failed to decode payload: %w", err)
 		}
 	}
 
 	if footer != nil {
 		if err := fillValue(footerBytes, footer); err != nil {
-			return errors.Wrap(err, "failed to decode footer")
+			return fmt.Errorf("failed to decode footer: %w", err)
 		}
 	}
 
@@ -155,12 +154,12 @@ func (p *V1) Sign(privateKey crypto.PrivateKey, payload interface{}, footer inte
 
 	payloadBytes, err := infToByteArr(payload)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to encode payload to []byte")
+		return "", fmt.Errorf("failed to encode payload to []byte: %w", err)
 	}
 
 	footerBytes, err := infToByteArr(footer)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to encode footer to []byte")
+		return "", fmt.Errorf("failed to encode footer to []byte: %w", err)
 	}
 
 	var opts rsa.PSSOptions
@@ -169,13 +168,13 @@ func (p *V1) Sign(privateKey crypto.PrivateKey, payload interface{}, footer inte
 	sha384 := crypto.SHA384
 	pssHash := sha384.New()
 	if _, err := pssHash.Write(PSSMessage); err != nil {
-		return "", errors.Wrap(err, "failed to create pss hash")
+		return "", fmt.Errorf("failed to create pss hash: %w", err)
 	}
 	hashed := pssHash.Sum(nil)
 
 	signature, err := rsa.SignPSS(rand.Reader, rsaPrivateKey, sha384, hashed, &opts)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to sign token")
+		return "", fmt.Errorf("failed to sign token: %w", err)
 	}
 
 	body := append(payloadBytes, signature...)
@@ -192,11 +191,11 @@ func (p *V1) Verify(token string, publicKey crypto.PublicKey, payload interface{
 
 	data, footerBytes, err := splitToken([]byte(token), headerV1Public)
 	if err != nil {
-		return errors.Wrap(err, "failed to decode token")
+		return fmt.Errorf("failed to decode token: %w", err)
 	}
 
 	if len(data) < v1SignSize {
-		return errors.Wrap(ErrIncorrectTokenFormat, "incorrect signature size")
+		return fmt.Errorf("incorrect signature size: %w", ErrIncorrectTokenFormat)
 	}
 
 	payloadBytes := data[:len(data)-v1SignSize]
@@ -208,7 +207,7 @@ func (p *V1) Verify(token string, publicKey crypto.PublicKey, payload interface{
 	sha384 := crypto.SHA384
 	pssHash := sha384.New()
 	if _, err := pssHash.Write(PSSMessage); err != nil {
-		return errors.Wrap(err, "failed to create pss hash")
+		return fmt.Errorf("failed to create pss hash: %w", err)
 	}
 	hashed := pssHash.Sum(nil)
 
@@ -218,13 +217,13 @@ func (p *V1) Verify(token string, publicKey crypto.PublicKey, payload interface{
 
 	if payload != nil {
 		if err := fillValue(payloadBytes, payload); err != nil {
-			return errors.Wrap(err, "failed to decode payload")
+			return fmt.Errorf("failed to decode payload: %w", err)
 		}
 	}
 
 	if footer != nil {
 		if err := fillValue(footerBytes, footer); err != nil {
-			return errors.Wrap(err, "failed to decode footer")
+			return fmt.Errorf("failed to decode footer: %w", err)
 		}
 	}
 

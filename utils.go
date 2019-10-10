@@ -5,10 +5,9 @@ import (
 	"crypto/sha512"
 	"encoding/binary"
 	"encoding/json"
-	"io"
-
-	"github.com/pkg/errors"
+	"fmt"
 	"golang.org/x/crypto/hkdf"
+	"io"
 )
 
 /*
@@ -67,13 +66,13 @@ func splitToken(token []byte, header []byte) (payload []byte, footer []byte, err
 
 	payload = make([]byte, tokenEncoder.DecodedLen(len(encodedPayload)))
 	if _, err = tokenEncoder.Decode(payload, encodedPayload); err != nil {
-		return nil, nil, errors.Wrap(err, "failed to decode payload")
+		return nil, nil, fmt.Errorf("failed to decode payload: %w", err)
 	}
 
 	if encodedFooter != nil {
 		footer = make([]byte, tokenEncoder.DecodedLen(len(encodedFooter)))
 		if _, err = tokenEncoder.Decode(footer, encodedFooter); err != nil {
-			return nil, nil, errors.Wrap(err, "failed to decode footer")
+			return nil, nil, fmt.Errorf("failed to decode footer: %w", err)
 		}
 	}
 
