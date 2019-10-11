@@ -29,11 +29,14 @@ matrix:
         - go test -v -race 
     - go: "1.12.x"
       script:
+        - go test -v -race
+    - go: "1.13.x"
+      script:
         - diff -u <(echo -n) <(goimports -d -s $(find . -type f -name '*.go' -not -path "./vendor/*"))
         - go vet $(go list ./... | grep -v /vendor/)
         - golint -set_exit_status
         - go test -v -race -coverprofile=paseto.coverprofile
-        - goveralls -coverprofile=paseto.coverprofile -service=travis-ci    
+        - goveralls -coverprofile=paseto.coverprofile -service=travis-ci
     - go: "tip"
       script:
         - diff -u <(echo -n) <(gofmt -d -s $(find . -type f -name '*.go' -not -path "./vendor/*"))
