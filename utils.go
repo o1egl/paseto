@@ -7,8 +7,8 @@ import (
 	"encoding/json"
 	"io"
 
-	"github.com/pkg/errors"
 	"golang.org/x/crypto/hkdf"
+	errors "golang.org/x/xerrors"
 )
 
 /*
@@ -21,9 +21,9 @@ separation between each piece of the message.
 func preAuthEncode(pieces ...[]byte) []byte {
 	buf := new(bytes.Buffer)
 	byteOrder := binary.LittleEndian
-	binary.Write(buf, byteOrder, int64(len(pieces)))
+	_ = binary.Write(buf, byteOrder, int64(len(pieces)))
 	for _, p := range pieces {
-		binary.Write(buf, byteOrder, int64(len(p)))
+		_ = binary.Write(buf, byteOrder, int64(len(p)))
 		buf.Write(p)
 	}
 	return buf.Bytes()
@@ -67,13 +67,13 @@ func splitToken(token []byte, header []byte) (payload []byte, footer []byte, err
 
 	payload = make([]byte, tokenEncoder.DecodedLen(len(encodedPayload)))
 	if _, err = tokenEncoder.Decode(payload, encodedPayload); err != nil {
-		return nil, nil, errors.Wrap(err, "failed to decode payload")
+		return nil, nil, errors.Errorf("failed to decode payload: %w", err)
 	}
 
 	if encodedFooter != nil {
 		footer = make([]byte, tokenEncoder.DecodedLen(len(encodedFooter)))
 		if _, err = tokenEncoder.Decode(footer, encodedFooter); err != nil {
-			return nil, nil, errors.Wrap(err, "failed to decode footer")
+			return nil, nil, errors.Errorf("failed to decode footer: %w", err)
 		}
 	}
 

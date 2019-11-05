@@ -3,12 +3,12 @@ package paseto
 import (
 	"bytes"
 	"crypto"
+	"crypto/ed25519"
 	"encoding/hex"
 	"testing"
 
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
-	"golang.org/x/crypto/ed25519"
+	errors "golang.org/x/xerrors"
 )
 
 func TestPasetoV2_Encrypt_Compatibility(t *testing.T) {
@@ -236,7 +236,7 @@ func TestPasetoV2_Verify_Error(t *testing.T) {
 	for name, test := range cases {
 		t.Run(name, func(t *testing.T) {
 			err := v2.Verify(test.token, test.publicKey, test.payload, test.footer)
-			assert.Equal(t, test.error, errors.Cause(err))
+			assert.Truef(t, errors.Is(err, test.error), "want: %s, got %s", test.error, err)
 		})
 	}
 }
@@ -292,7 +292,7 @@ func TestPasetoV2_Decrypt_Error(t *testing.T) {
 	for name, test := range cases {
 		t.Run(name, func(t *testing.T) {
 			err := v2.Decrypt(test.token, symmetricKey, test.payload, test.footer)
-			assert.Equal(t, test.error, errors.Cause(err))
+			assert.Truef(t, errors.Is(err, test.error), "want: %s, got %s", test.error, err)
 		})
 	}
 }
