@@ -6,7 +6,7 @@ import (
 	"crypto"
 	"strings"
 
-	"github.com/pkg/errors"
+	errors "golang.org/x/xerrors"
 )
 
 // Version defines the token version.
@@ -73,9 +73,11 @@ func ParseFooter(token string, footer interface{}) error {
 	if len(parts) == 4 {
 		b, err := tokenEncoder.DecodeString(parts[3])
 		if err != nil {
-			return errors.Wrap(err, "failed to decode token")
+			return errors.Errorf("failed to decode token: %w", err)
 		}
-		return errors.Wrap(fillValue(b, footer), "failed to decode footer")
+		if err := fillValue(b, footer); err != nil {
+			return errors.Errorf("failed to decode footer: %w", err)
+		}
 	}
 	if len(parts) < 3 {
 		return ErrIncorrectTokenFormat

@@ -2,7 +2,8 @@ package paseto
 
 import (
 	"crypto"
-	"errors"
+
+	errors "golang.org/x/xerrors"
 )
 
 var (
