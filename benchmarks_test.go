@@ -1,10 +1,11 @@
 package paseto
 
 import (
-	"crypto/ed25519"
 	"encoding/hex"
 	"testing"
 	"time"
+
+	"golang.org/x/crypto/ed25519"
 )
 
 // JSONToken

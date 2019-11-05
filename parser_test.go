@@ -2,11 +2,11 @@ package paseto
 
 import (
 	"crypto"
-	"crypto/ed25519"
 	"encoding/hex"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/crypto/ed25519"
 )
 
 func TestParse(t *testing.T) {

@@ -2,12 +2,12 @@ package paseto
 
 import (
 	"crypto"
-	"crypto/ed25519"
 	"crypto/rand"
 	"io"
 
 	"golang.org/x/crypto/blake2b"
 	"golang.org/x/crypto/chacha20poly1305"
+	"golang.org/x/crypto/ed25519"
 	errors "golang.org/x/xerrors"
 )
 

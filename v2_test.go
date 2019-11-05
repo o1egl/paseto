@@ -3,11 +3,11 @@ package paseto
 import (
 	"bytes"
 	"crypto"
-	"crypto/ed25519"
 	"encoding/hex"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/crypto/ed25519"
 	errors "golang.org/x/xerrors"
 )
 
