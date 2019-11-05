@@ -13,6 +13,7 @@ import (
 
 const (
 	v2SignSize = ed25519.SignatureSize
+	// XNonceSize is the size of the XChaCha20 nonce in bytes.
 	XNonceSize = 24
 )
 
