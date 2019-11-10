@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	ErrTypeCasting   = errors.New("type casting error")
+	ErrTypeCast      = errors.New("type cast error")
 	ErrClaimNotFound = errors.New("claim not found")
 )
 
@@ -54,17 +54,17 @@ func (t *JSONToken) Get(key string, v interface{}) error {
 	case *string:
 		s, ok := val.(string)
 		if !ok {
-			return errors.Errorf(`failed to cast value to string: %w`, ErrTypeCasting)
+			return errors.Errorf(`failed to cast value to string: %w`, ErrTypeCast)
 		}
 		*f = s
 	case *time.Time:
 		s, ok := val.(string)
 		if !ok {
-			return errors.Errorf(`failed to cast value to time.Time: %w`, ErrTypeCasting)
+			return errors.Errorf(`failed to cast value to time.Time: %w`, ErrTypeCast)
 		}
 		date, err := time.Parse(time.RFC3339, s)
 		if err != nil {
-			return errors.Errorf(`failed to parse time value: %v: %w`, err, ErrTypeCasting)
+			return errors.Errorf(`failed to parse time value: %v: %w`, err, ErrTypeCast)
 		}
 		*f = date
 	case *[]byte:
@@ -73,16 +73,16 @@ func (t *JSONToken) Get(key string, v interface{}) error {
 		}
 		s, ok := val.(string)
 		if !ok {
-			return errors.Errorf(`failed to cast value to []byte: %w`, ErrTypeCasting)
+			return errors.Errorf(`failed to cast value to []byte: %w`, ErrTypeCast)
 		}
 		bytes, err := base64.StdEncoding.DecodeString(s)
 		if err != nil {
-			return errors.Errorf(`failed to decode []byte: %w`, ErrTypeCasting)
+			return errors.Errorf(`failed to decode []byte: %w`, ErrTypeCast)
 		}
 		*f = bytes
 	default:
 		if err := mapstructure.Decode(val, v); err != nil {
-			return errors.Errorf(`failed to cast value to %s: %v: %w`, reflect.TypeOf(v).String(), err, ErrTypeCasting)
+			return errors.Errorf(`failed to cast value to %s: %v: %w`, reflect.TypeOf(v).String(), err, ErrTypeCast)
 		}
 	}
 	return nil
