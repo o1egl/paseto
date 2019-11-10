@@ -1,3 +1,4 @@
+//go:generate go-enum --file $GOFILE
 // Package paseto provides a Go implementation of PASETO, a secure alternative
 // to the JOSE standards (JWT, JWE, JWS). See https://paseto.io/
 package paseto
@@ -10,28 +11,26 @@ import (
 )
 
 // Version defines the token version.
-type Version string
+/*
+ENUM(
+v1
+v2
+)
+*/
+type Version int
 
+/*
+ENUM(
+local
+public
+)
+*/
 // Purpose defines the token type by its intended purpose.
 type Purpose int
 
-const (
-	// Version1 defines protocol version 1
-	Version1 = Version("v1")
-	// Version2 defines protocol version 2
-	Version2 = Version("v2")
-)
-
-const (
-	// LOCAL defines symmetric encrypted token type
-	LOCAL Purpose = iota
-	// PUBLIC defines asymmetric signed token type
-	PUBLIC
-)
-
 var availableVersions = map[Version]Protocol{
-	Version1: NewV1(),
-	Version2: NewV2(),
+	VersionV1: NewV1(),
+	VersionV2: NewV2(),
 }
 
 // Parse extracts the payload and footer from the token by calling either
@@ -39,31 +38,34 @@ var availableVersions = map[Version]Protocol{
 // To parse public tokens you need to provide a map containing v1 and/or v2
 // public keys, depending on the version of the token. To parse private tokens
 // you need to provide the symmetric key.
-func Parse(token string, payload interface{}, footer interface{},
+func Parse(token string, payload, footer interface{},
 	symmetricKey []byte, publicKeys map[Version]crypto.PublicKey) (Version, error) {
 	parts := strings.Split(token, ".")
-	version := Version(parts[0])
+	version, err := ParseVersion(parts[0])
+	if err != nil {
+		return version, ErrUnsupportedTokenVersion
+	}
 	if len(parts) < 3 {
 		return version, ErrIncorrectTokenFormat
 	}
 
-	protocol, found := availableVersions[version]
-	if !found {
-		return version, ErrUnsupportedTokenVersion
-	}
+	protocol := availableVersions[version]
 
-	switch parts[1] {
-	case "local":
+	purpose, err := ParsePurpose(parts[1])
+	if err != nil {
+		return version, ErrUnsupportedTokenType
+	}
+	switch purpose {
+	case PurposeLocal:
 		return version, protocol.Decrypt(token, symmetricKey, payload, footer)
-	case "public":
+	case PurposePublic:
 		pubKey, found := publicKeys[version]
 		if !found {
 			return version, ErrPublicKeyNotFound
 		}
 		return version, protocol.Verify(token, pubKey, payload, footer)
 	default:
-		return version, ErrUnsupportedTokenType
-
+		panic("unreachable")
 	}
 }
 
@@ -85,33 +87,22 @@ func ParseFooter(token string, footer interface{}) error {
 	return nil
 }
 
-// GetTokenInfo returns the token version (paseto.Version1 or paseto.Version2) and purpose
-// (paseto.LOCAL or paseto.PUBLIC).
+// GetTokenInfo returns the token version (paseto.VersionV1 or paseto.VersionV2) and purpose
+// (paseto.PurposeLocal or paseto.PurposePublic).
 func GetTokenInfo(token string) (Version, Purpose, error) {
 	parts := strings.Split(token, ".")
 	if len(parts) < 3 {
-		return "", 0, ErrIncorrectTokenFormat
+		return 0, 0, ErrIncorrectTokenFormat
 	}
 
-	var version Version
-	var purpose Purpose
-
-	switch parts[0] {
-	case string(Version1):
-		version = Version1
-	case string(Version2):
-		version = Version2
-	default:
-		return "", 0, ErrUnsupportedTokenVersion
+	version, err := ParseVersion(parts[0])
+	if err != nil {
+		return 0, 0, ErrUnsupportedTokenVersion
 	}
 
-	switch parts[1] {
-	case "local":
-		purpose = LOCAL
-	case "public":
-		purpose = PUBLIC
-	default:
-		return "", 0, ErrUnsupportedTokenType
+	purpose, err := ParsePurpose(parts[1])
+	if err != nil {
+		return 0, 0, ErrUnsupportedTokenType
 	}
 
 	return version, purpose, nil

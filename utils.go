@@ -29,22 +29,22 @@ func preAuthEncode(pieces ...[]byte) []byte {
 	return buf.Bytes()
 }
 
-func splitKey(key []byte, salt []byte) ([]byte, []byte, error) {
+func splitKey(key, salt []byte) (encKey, authKey []byte, err error) {
 	eReader := hkdf.New(sha512.New384, key, salt, []byte("paseto-encryption-key"))
 	aReader := hkdf.New(sha512.New384, key, salt, []byte("paseto-auth-key-for-aead"))
-	encKey := make([]byte, 32)
-	authKey := make([]byte, 32)
-	if _, err := io.ReadFull(eReader, encKey); err != nil {
+	encKey = make([]byte, 32)
+	authKey = make([]byte, 32)
+	if _, err = io.ReadFull(eReader, encKey); err != nil {
 		return nil, nil, err
 	}
-	if _, err := io.ReadFull(aReader, authKey); err != nil {
+	if _, err = io.ReadFull(aReader, authKey); err != nil {
 		return nil, nil, err
 	}
 
 	return encKey, authKey, nil
 }
 
-func splitToken(token []byte, header []byte) (payload []byte, footer []byte, err error) {
+func splitToken(token, header []byte) (payload, footer []byte, err error) {
 	var (
 		encodedPayload []byte
 		encodedFooter  []byte
@@ -115,7 +115,7 @@ func fillValue(data []byte, i interface{}) error {
 	return nil
 }
 
-func createToken(header []byte, body []byte, footer []byte) string {
+func createToken(header, body, footer []byte) string {
 	encodedPayload := make([]byte, tokenEncoder.EncodedLen(len(body)))
 	tokenEncoder.Encode(encodedPayload, body)
 
@@ -133,9 +133,8 @@ func createToken(header []byte, body []byte, footer []byte) string {
 	offset += copy(token[offset:], header)
 	offset += copy(token[offset:], encodedPayload)
 	if encodedFooter != nil {
-		offset += copy(token[offset:], []byte("."))
+		offset += copy(token[offset:], ".")
 		copy(token[offset:], encodedFooter)
-
 	}
 	return string(token)
 }

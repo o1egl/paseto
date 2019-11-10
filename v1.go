@@ -39,7 +39,7 @@ func NewV1() *V1 {
 }
 
 // Encrypt implements Protocol.Encrypt
-func (p *V1) Encrypt(key []byte, payload interface{}, footer interface{}) (string, error) {
+func (p *V1) Encrypt(key []byte, payload, footer interface{}) (string, error) {
 	payloadBytes, err := infToByteArr(payload)
 	if err != nil {
 		return "", errors.Errorf("failed to encode payload to []byte: %w", err)
@@ -56,13 +56,13 @@ func (p *V1) Encrypt(key []byte, payload interface{}, footer interface{}) (strin
 		rndBytes = p.nonce
 	} else {
 		rndBytes = make([]byte, nonceSize)
-		if _, err := io.ReadFull(rand.Reader, rndBytes); err != nil {
+		if _, err := io.ReadFull(rand.Reader, rndBytes); err != nil { //nolint:govet
 			return "", errors.Errorf("failed to read from rand.Reader: %w", err)
 		}
 	}
 
 	macN := hmac.New(sha512.New384, rndBytes)
-	if _, err := macN.Write(payloadBytes); err != nil {
+	if _, err := macN.Write(payloadBytes); err != nil { //nolint:govet
 		return "", errors.Errorf("failed to hash payload: %w", err)
 	}
 	nonce := macN.Sum(nil)[:32]
@@ -96,7 +96,7 @@ func (p *V1) Encrypt(key []byte, payload interface{}, footer interface{}) (strin
 }
 
 // Decrypt implements Protocol.Decrypt
-func (p *V1) Decrypt(token string, key []byte, payload interface{}, footer interface{}) error {
+func (p *V1) Decrypt(token string, key []byte, payload, footer interface{}) error {
 	data, footerBytes, err := splitToken([]byte(token), headerV1)
 	if err != nil {
 		return errors.Errorf("failed to decode token: %w", err)
@@ -116,7 +116,7 @@ func (p *V1) Decrypt(token string, key []byte, payload interface{}, footer inter
 	}
 
 	h := hmac.New(sha512.New384, authKey)
-	if _, err := h.Write(preAuthEncode(headerV1, nonce, encryptedPayload, footerBytes)); err != nil {
+	if _, err := h.Write(preAuthEncode(headerV1, nonce, encryptedPayload, footerBytes)); err != nil { //nolint:govet
 		return errors.Errorf("failed to create a signature: %w", err)
 	}
 
@@ -147,7 +147,7 @@ func (p *V1) Decrypt(token string, key []byte, payload interface{}, footer inter
 }
 
 // Sign implements Protocol.Sign. privateKey should be of type *rsa.PrivateKey
-func (p *V1) Sign(privateKey crypto.PrivateKey, payload interface{}, footer interface{}) (string, error) {
+func (p *V1) Sign(privateKey crypto.PrivateKey, payload, footer interface{}) (string, error) {
 	rsaPrivateKey, ok := privateKey.(*rsa.PrivateKey)
 	if !ok {
 		return "", ErrIncorrectPrivateKeyType
@@ -168,7 +168,7 @@ func (p *V1) Sign(privateKey crypto.PrivateKey, payload interface{}, footer inte
 	PSSMessage := preAuthEncode(headerV1Public, payloadBytes, footerBytes)
 	sha384 := crypto.SHA384
 	pssHash := sha384.New()
-	if _, err := pssHash.Write(PSSMessage); err != nil {
+	if _, err := pssHash.Write(PSSMessage); err != nil { //nolint:govet
 		return "", errors.Errorf("failed to create pss hash: %w", err)
 	}
 	hashed := pssHash.Sum(nil)
@@ -184,7 +184,7 @@ func (p *V1) Sign(privateKey crypto.PrivateKey, payload interface{}, footer inte
 }
 
 // Verify implements Protocol.Verify. publicKey should be of type *rsa.PublicKey
-func (p *V1) Verify(token string, publicKey crypto.PublicKey, payload interface{}, footer interface{}) error {
+func (p *V1) Verify(token string, publicKey crypto.PublicKey, payload, footer interface{}) error {
 	rsaPublicKey, ok := publicKey.(*rsa.PublicKey)
 	if !ok {
 		return ErrIncorrectPublicKeyType
@@ -207,7 +207,7 @@ func (p *V1) Verify(token string, publicKey crypto.PublicKey, payload interface{
 	PSSMessage := preAuthEncode(headerV1Public, payloadBytes, footerBytes)
 	sha384 := crypto.SHA384
 	pssHash := sha384.New()
-	if _, err := pssHash.Write(PSSMessage); err != nil {
+	if _, err := pssHash.Write(PSSMessage); err != nil { //nolint:govet
 		return errors.Errorf("failed to create pss hash: %w", err)
 	}
 	hashed := pssHash.Sum(nil)

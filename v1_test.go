@@ -344,6 +344,7 @@ func TestPasetoV1_Sign_Error(t *testing.T) {
 
 func TestPasetoV1_Verify_Error(t *testing.T) {
 	v1 := NewV1()
+	//nolint:gosec
 	const token = "v1.public.eyJOYW1lIjoiSm9obiIsIkFnZSI6MzB9vGJwH3bQzs04XkPPlq2jA3B-_xKzA_qW193-eer9mbZJmgq5zDUY8OV2fVUSZLRVPz4yMe2hFg17riaI8nxSqc1dMnXpwbk2SnUfxyfZ2ZQjKj-g0JiYUrekqvi21YbFGMg6DHWXFlHkX32JY-fEcyu88pwB-VOdJdKX2LVGxVQVVOFBpD7gNXGoFsrYsSAUjMsI80x75NSAuAcTdy3BldR2YA9J0UhOcs-kfQLTOM5unhQvPd9411AaIVfhPtTy0uPooJfsClEjnJnL8Q-uCINjbWnlFtcb2nlYKjbAIXbiM97FvQvakkt6diU0yNV6Fh_C6QCTKZibZzlMLy97QA.eyJOYW1lIjoiQW50b255IiwiQWdlIjo2MH0"
 
 	cases := map[string]struct {

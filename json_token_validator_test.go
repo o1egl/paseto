@@ -23,8 +23,9 @@ func TestJsonToken_Validate(t *testing.T) {
 		NotBefore:  nbt,
 	}
 
-	jsonToken.Validate(ForAudience("test"), IdentifiedBy("123"), IssuedBy("test_service"),
+	err := jsonToken.Validate(ForAudience("test"), IdentifiedBy("123"), IssuedBy("test_service"),
 		Subject("test_subject"), ValidAt(now.Add(2*time.Hour)))
+	assert.NoError(t, err)
 }
 
 func TestJsonToken_Validate_Err(t *testing.T) {
