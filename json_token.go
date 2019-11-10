@@ -1,9 +1,19 @@
 package paseto
 
 import (
+	"encoding/base64"
 	"encoding/json"
-	"fmt"
+	"reflect"
 	"time"
+
+	"github.com/mitchellh/mapstructure"
+
+	errors "golang.org/x/xerrors"
+)
+
+var (
+	ErrTypeCasting   = errors.New("type casting error")
+	ErrClaimNotFound = errors.New("claim not found")
 )
 
 // JSONToken defines standard token payload claims and allows for additional
@@ -30,19 +40,58 @@ type JSONToken struct {
 	// NotBefore is a time on or before which the token must not be accepted for
 	// processing.
 	NotBefore time.Time
-	claims    map[string]string
+	claims    map[string]interface{}
 }
 
-// Get returns the value of a custom claim, as a string.
-// If there is no such claim, an empty string is returned.
-func (t *JSONToken) Get(key string) string {
-	return t.claims[key]
+// Get the value of the claim and uses reflection to store it in the value pointed to by v.
+// If the claim doesn't exist an ErrClaimNotFound error is returned
+func (t *JSONToken) Get(key string, v interface{}) error {
+	val, ok := t.claims[key]
+	if !ok {
+		return ErrClaimNotFound
+	}
+	switch f := v.(type) {
+	case *string:
+		s, ok := val.(string)
+		if !ok {
+			return errors.Errorf(`failed to cast value to string: %w`, ErrTypeCasting)
+		}
+		*f = s
+	case *time.Time:
+		s, ok := val.(string)
+		if !ok {
+			return errors.Errorf(`failed to cast value to time.Time: %w`, ErrTypeCasting)
+		}
+		date, err := time.Parse(time.RFC3339, s)
+		if err != nil {
+			return errors.Errorf(`failed to parse time value: %v: %w`, err, ErrTypeCasting)
+		}
+		*f = date
+	case *[]byte:
+		if val == nil {
+			return nil
+		}
+		s, ok := val.(string)
+		if !ok {
+			return errors.Errorf(`failed to cast value to []byte: %w`, ErrTypeCasting)
+		}
+		bytes, err := base64.StdEncoding.DecodeString(s)
+		if err != nil {
+			return errors.Errorf(`failed to decode []byte: %w`, ErrTypeCasting)
+		}
+		*f = bytes
+	default:
+		if err := mapstructure.Decode(val, v); err != nil {
+			return errors.Errorf(`failed to cast value to %s: %v: %w`, reflect.TypeOf(v).String(), err, ErrTypeCasting)
+		}
+	}
+	return nil
 }
 
-// Set sets the value of a custom claim to the string value provided.
-func (t *JSONToken) Set(key string, value string) {
+// Set sets the value of a custom claim
+func (t *JSONToken) Set(key string, value interface{}) {
 	if t.claims == nil {
-		t.claims = make(map[string]string)
+		t.claims = make(map[string]interface{})
 	}
 	t.claims[key] = value
 }
@@ -50,7 +99,7 @@ func (t *JSONToken) Set(key string, value string) {
 // MarshalJSON implements json.Marshaler interface
 func (t JSONToken) MarshalJSON() ([]byte, error) {
 	if t.claims == nil {
-		t.claims = make(map[string]string)
+		t.claims = make(map[string]interface{})
 	}
 	if t.Audience != "" {
 		t.claims["aud"] = t.Audience
@@ -84,30 +133,26 @@ func (t *JSONToken) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	t.Audience = t.claims["aud"]
-	t.Issuer = t.claims["iss"]
-	t.Jti = t.claims["jti"]
-	t.Subject = t.claims["sub"]
-
-	if timeStr, ok := t.claims["exp"]; ok {
-		t.Expiration, err = time.Parse(time.RFC3339, timeStr)
-		if err != nil {
-			return fmt.Errorf(`incorrect time format for Expiration field "%s". It should be RFC3339`, timeStr)
-		}
+	if err = t.Get("aud", &t.Audience); err != nil && !errors.Is(err, ErrClaimNotFound) {
+		return errors.Errorf("failed to parse audience claim: %w", err)
 	}
-
-	if timeStr, ok := t.claims["iat"]; ok {
-		t.IssuedAt, err = time.Parse(time.RFC3339, timeStr)
-		if err != nil {
-			return fmt.Errorf(`incorrect time format for IssuedAt field "%s". It should be RFC3339`, timeStr)
-		}
+	if err = t.Get("iss", &t.Issuer); err != nil && !errors.Is(err, ErrClaimNotFound) {
+		return errors.Errorf("failed to parse issuer claim: %w", err)
 	}
-
-	if timeStr, ok := t.claims["nbf"]; ok {
-		t.NotBefore, err = time.Parse(time.RFC3339, timeStr)
-		if err != nil {
-			return fmt.Errorf(`incorrect time format for NotBefore field "%s". It should be RFC3339`, timeStr)
-		}
+	if err = t.Get("jti", &t.Jti); err != nil && !errors.Is(err, ErrClaimNotFound) {
+		return errors.Errorf("failed to parse jti claim: %w", err)
+	}
+	if err = t.Get("sub", &t.Subject); err != nil && !errors.Is(err, ErrClaimNotFound) {
+		return errors.Errorf("failed to parse subject claim: %w", err)
+	}
+	if err = t.Get("exp", &t.Expiration); err != nil && !errors.Is(err, ErrClaimNotFound) {
+		return errors.Errorf("failed to parse expiration claim: %w", err)
+	}
+	if err = t.Get("iat", &t.IssuedAt); err != nil && !errors.Is(err, ErrClaimNotFound) {
+		return errors.Errorf("failed to parse issued at claim: %w", err)
+	}
+	if err = t.Get("nbf", &t.NotBefore); err != nil && !errors.Is(err, ErrClaimNotFound) {
+		return errors.Errorf("failed to parse not before claim: %w", err)
 	}
 
 	return nil
