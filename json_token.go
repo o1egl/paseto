@@ -99,6 +99,7 @@ func (t *JSONToken) Set(key string, value interface{}) {
 }
 
 // MarshalJSON implements json.Marshaler interface
+// nolint:gocritic
 func (t JSONToken) MarshalJSON() ([]byte, error) {
 	if t.claims == nil {
 		t.claims = make(map[string]interface{})
@@ -129,31 +130,31 @@ func (t JSONToken) MarshalJSON() ([]byte, error) {
 }
 
 // UnmarshalJSON implements json.Unmarshaler interface
+//nolint:gocyclo
 func (t *JSONToken) UnmarshalJSON(data []byte) error {
-	var err error
 	if err := json.Unmarshal(data, &t.claims); err != nil {
 		return err
 	}
 
-	if err = t.Get("aud", &t.Audience); err != nil && !errors.Is(err, ErrClaimNotFound) {
+	if err := t.Get("aud", &t.Audience); err != nil && !errors.Is(err, ErrClaimNotFound) {
 		return errors.Errorf("failed to parse audience claim: %w", err)
 	}
-	if err = t.Get("iss", &t.Issuer); err != nil && !errors.Is(err, ErrClaimNotFound) {
+	if err := t.Get("iss", &t.Issuer); err != nil && !errors.Is(err, ErrClaimNotFound) {
 		return errors.Errorf("failed to parse issuer claim: %w", err)
 	}
-	if err = t.Get("jti", &t.Jti); err != nil && !errors.Is(err, ErrClaimNotFound) {
+	if err := t.Get("jti", &t.Jti); err != nil && !errors.Is(err, ErrClaimNotFound) {
 		return errors.Errorf("failed to parse jti claim: %w", err)
 	}
-	if err = t.Get("sub", &t.Subject); err != nil && !errors.Is(err, ErrClaimNotFound) {
+	if err := t.Get("sub", &t.Subject); err != nil && !errors.Is(err, ErrClaimNotFound) {
 		return errors.Errorf("failed to parse subject claim: %w", err)
 	}
-	if err = t.Get("exp", &t.Expiration); err != nil && !errors.Is(err, ErrClaimNotFound) {
+	if err := t.Get("exp", &t.Expiration); err != nil && !errors.Is(err, ErrClaimNotFound) {
 		return errors.Errorf("failed to parse expiration claim: %w", err)
 	}
-	if err = t.Get("iat", &t.IssuedAt); err != nil && !errors.Is(err, ErrClaimNotFound) {
+	if err := t.Get("iat", &t.IssuedAt); err != nil && !errors.Is(err, ErrClaimNotFound) {
 		return errors.Errorf("failed to parse issued at claim: %w", err)
 	}
-	if err = t.Get("nbf", &t.NotBefore); err != nil && !errors.Is(err, ErrClaimNotFound) {
+	if err := t.Get("nbf", &t.NotBefore); err != nil && !errors.Is(err, ErrClaimNotFound) {
 		return errors.Errorf("failed to parse not before claim: %w", err)
 	}
 
@@ -165,12 +166,11 @@ func (t *JSONToken) UnmarshalJSON(data []byte) error {
 // which checks IssuedAt, NotBefore and Expiration fields against the current
 // time.
 func (t *JSONToken) Validate(validators ...Validator) error {
-	var err error
 	if len(validators) == 0 {
 		validators = append(validators, ValidAt(time.Now()))
 	}
 	for _, validator := range validators {
-		if err = validator(t); err != nil {
+		if err := validator(t); err != nil {
 			return err
 		}
 	}

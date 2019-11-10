@@ -20,25 +20,25 @@ func TestParse(t *testing.T) {
 	}{
 		"v1.local": {
 			token:   "v1.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYYTojmVaYumJSQt8aggtCaFKWyaodw5k-CUWhYKATopiabAl4OAmTxHCfm2E4NSPvrmMcmi8n-JcZ93HpcxC6rx_ps22vutv7iP7wf8QcSD1Mwx.Q3VvbiBBbHBpbnVz",
-			version: Version1,
+			version: VersionV1,
 			payload: []byte("Love is stronger than hate or fear"),
 			footer:  []byte("Cuon Alpinus"),
 		},
 		"v1.public": {
 			token:   "v1.public.TG9yZW0gSXBzdW1684wbBiSvpwhED_5bdFnF2ithKoKDyzEyTOLUlFnz83IibTKCOw3LPOEp8xKM67EYOw1xU6OBBOdLQT-XO5mKMg51JJ4J91IBDwDazDex0D2UQphr7i8gPGP_5FyjlNincP_rToVbYOOzfk9cmnH1-iLmOxxbrsa7-v08Gx12ib-Z-KxKBXBHbxI8uvauVWUVS6A7rl0eAlb6SecSPPQpxQnD1zakA-nGFUbWq5Zx8XqgVZ-VidcGcd7kmhZ-bMy4Z1uGOWmAXHC793v8sbXuRdroZM8kmO0pqQMoE_wmlriIxflFABCa1PPWi5YB87aVF3oIWHYXawZXxRwxevgK.Zm9vdGVy",
-			version: Version1,
+			version: VersionV1,
 			payload: []byte("Lorem Ipsum"),
 			footer:  []byte("footer"),
 		},
 		"v2.local": {
 			token:   "v2.local.FGVEQLywggpvH0AzKtLXz0QRmGYuC6yvl05z9GIX0cnol6UK94cfV77AXnShlUcNgpDR12FrQiurS8jxBRmvoIKmeMWC5wY9Y6w.Q3VvbiBBbHBpbnVz",
-			version: Version2,
+			version: VersionV2,
 			payload: []byte("Love is stronger than hate or fear"),
 			footer:  []byte("Cuon Alpinus"),
 		},
 		"v2.public": {
 			token:   "v2.public.RnJhbmsgRGVuaXMgcm9ja3O7MPuu90WKNyvBUUhAGFmi4PiPOr2bN2ytUSU-QWlj8eNefki2MubssfN1b8figynnY0WusRPwIQ-o0HSZOS0F.Q3VvbiBBbHBpbnVz",
-			version: Version2,
+			version: VersionV2,
 			payload: []byte("Frank Denis rocks"),
 			footer:  []byte("Cuon Alpinus"),
 		},
@@ -51,7 +51,7 @@ func TestParse(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			var payload []byte
 			var footer []byte
-			if ver, err := Parse(test.token, &payload, &footer, symmetricKey, map[Version]crypto.PublicKey{Version1: rsaPublicKey, Version2: v2PublicKey}); assert.NoError(t, err) {
+			if ver, err := Parse(test.token, &payload, &footer, symmetricKey, map[Version]crypto.PublicKey{VersionV1: rsaPublicKey, VersionV2: v2PublicKey}); assert.NoError(t, err) {
 				assert.Equal(t, test.version, ver)
 				assert.Equal(t, test.payload, payload)
 				assert.Equal(t, test.footer, footer)
@@ -89,7 +89,6 @@ func TestParse_Err(t *testing.T) {
 			assert.Equal(t, test.error, err)
 		})
 	}
-
 }
 
 func TestParseFooter(t *testing.T) {
@@ -102,11 +101,11 @@ func TestParseFooter(t *testing.T) {
 		"Non empty footer": {
 			token:   "v1.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYYTojmVaYumJSQt8aggtCaFKWyaodw5k-CUWhYKATopiabAl4OAmTxHCfm2E4NSPvrmMcmi8n-JcZ93HpcxC6rx_ps22vutv7iP7wf8QcSD1Mwx.Q3VvbiBBbHBpbnVz",
 			footer:  []byte("Cuon Alpinus"),
-			version: Version1,
+			version: VersionV1,
 		},
 		"Empty footer": {
 			token:   "v1.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYYTojmVaYumJSQt8aggtCaFKWyaodw5k-CUWhYKATopiabAl4OAmTxHCfm2E4NSPvrmMcmi8n-JcZ93HpcxC6rx_ps22vutv7iP7wf8QcSD1Mwx",
-			version: Version1,
+			version: VersionV1,
 		},
 		"Incorrect token format": {
 			token: "v1.rElw-WywOuwAqK",
@@ -133,18 +132,18 @@ func TestGetTokenInfo(t *testing.T) {
 	}{
 		"v1.local": {
 			token:   "v1.local.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYYTojmVaYumJSQt8aggtCaFKWyaodw5k-CUWhYKATopiabAl4OAmTxHCfm2E4NSPvrmMcmi8n-JcZ93HpcxC6rx_ps22vutv7iP7wf8QcSD1Mwx.Q3VvbiBBbHBpbnVz",
-			version: Version1,
-			purpose: LOCAL,
+			version: VersionV1,
+			purpose: PurposeLocal,
 		},
 		"v2.local": {
 			token:   "v2.local.driRNhM20GQPvlWfJCepzh6HdijAq-yNUtKpdy5KXjKfpSKrOlqQvQ",
-			version: Version2,
-			purpose: LOCAL,
+			version: VersionV2,
+			purpose: PurposeLocal,
 		},
 		"v1.public": {
 			token:   "v1.public.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYYTojmVaYumJSQt8aggtCaFKWyaodw5k-CUWhYKATopiabAl4OAmTxHCfm2E4NSPvrmMcmi8n-JcZ93HpcxC6rx_ps22vutv7iP7wf8QcSD1Mwx.Q3VvbiBBbHBpbnVh",
-			version: Version1,
-			purpose: PUBLIC,
+			version: VersionV1,
+			purpose: PurposePublic,
 		},
 		"Unsupported token version": {
 			token: "v0.public.rElw-WywOuwAqKC9Yao3YokSp7vx0YiUB9hLTnsVOYYTojmVaYumJSQt8aggtCaFKWyaodw5k-CUWhYKATopiabAl4OAmTxHCfm2E4NSPvrmMcmi8n-JcZ93HpcxC6rx_ps22vutv7iP7wf8QcSD1Mwx.Q3VvbiBBbHBpbnVh",

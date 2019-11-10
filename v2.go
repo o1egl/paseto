@@ -32,7 +32,7 @@ type V2 struct {
 }
 
 // Encrypt implements Protocol.Encrypt
-func (p *V2) Encrypt(key []byte, payload interface{}, footer interface{}) (string, error) {
+func (p *V2) Encrypt(key []byte, payload, footer interface{}) (string, error) {
 	payloadBytes, err := infToByteArr(payload)
 	if err != nil {
 		return "", errors.Errorf("failed to encode payload to []byte: %w", err)
@@ -49,7 +49,7 @@ func (p *V2) Encrypt(key []byte, payload interface{}, footer interface{}) (strin
 		rndBytes = p.nonce
 	} else {
 		rndBytes = make([]byte, XNonceSize)
-		if _, err := io.ReadFull(rand.Reader, rndBytes); err != nil {
+		if _, err := io.ReadFull(rand.Reader, rndBytes); err != nil { //nolint:govet
 			return "", errors.Errorf("failed to read from rand.Reader: %w", err)
 		}
 	}
@@ -58,7 +58,7 @@ func (p *V2) Encrypt(key []byte, payload interface{}, footer interface{}) (strin
 	if err != nil {
 		return "", errors.Errorf("failed to create blake2b hash: %w", err)
 	}
-	if _, err := hash.Write(payloadBytes); err != nil {
+	if _, err := hash.Write(payloadBytes); err != nil { //nolint:govet
 		return "", errors.Errorf("failed to hash payload: %w", err)
 	}
 
@@ -75,7 +75,7 @@ func (p *V2) Encrypt(key []byte, payload interface{}, footer interface{}) (strin
 }
 
 // Decrypt implements Protocol.Decrypt
-func (*V2) Decrypt(token string, key []byte, payload interface{}, footer interface{}) error {
+func (*V2) Decrypt(token string, key []byte, payload, footer interface{}) error {
 	body, footerBytes, err := splitToken([]byte(token), headerV2)
 	if err != nil {
 		return errors.Errorf("failed to decode token: %w", err)
@@ -113,7 +113,7 @@ func (*V2) Decrypt(token string, key []byte, payload interface{}, footer interfa
 }
 
 // Sign implements Protocol.Sign
-func (*V2) Sign(privateKey crypto.PrivateKey, payload interface{}, footer interface{}) (string, error) {
+func (*V2) Sign(privateKey crypto.PrivateKey, payload, footer interface{}) (string, error) {
 	key, ok := privateKey.(ed25519.PrivateKey)
 	if !ok {
 		return "", ErrIncorrectPrivateKeyType
@@ -135,7 +135,7 @@ func (*V2) Sign(privateKey crypto.PrivateKey, payload interface{}, footer interf
 }
 
 // Verify implements Protocol.Verify
-func (*V2) Verify(token string, publicKey crypto.PublicKey, payload interface{}, footer interface{}) error {
+func (*V2) Verify(token string, publicKey crypto.PublicKey, payload, footer interface{}) error {
 	pub, ok := publicKey.(ed25519.PublicKey)
 	if !ok {
 		return ErrIncorrectPublicKeyType
