@@ -12,7 +12,9 @@ import (
 )
 
 var (
-	ErrTypeCast      = errors.New("type cast error")
+	// ErrTypeCast type cast error
+	ErrTypeCast = errors.New("type cast error")
+	// ErrClaimNotFound claim not found error
 	ErrClaimNotFound = errors.New("claim not found")
 )
 
