@@ -310,7 +310,7 @@ func TestPasetoV1_Decrypt_Error(t *testing.T) {
 	for name, test := range cases {
 		t.Run(name, func(t *testing.T) {
 			err := v1.Decrypt(test.token, symmetricKey, test.payload, test.footer)
-			assert.Truef(t, errors.Is(err, test.error), "want: %s, got %s", test.error, err)
+			assert.Truef(t, errors.Is(err, test.error), "want: %s,\n got: %s", test.error, err)
 		})
 	}
 }
