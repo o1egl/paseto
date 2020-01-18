@@ -33,9 +33,33 @@ var availableVersions = map[Version]Protocol{
 	VersionV2: NewV2(),
 }
 
+// Encrypt encrypts a token with a symmetric key. The key length must be 32.
+// Uses V2 protocol as default
+func Encrypt(key []byte, payload, footer interface{}) (string, error) {
+	return NewV2().Encrypt(key, payload, footer)
+}
+
+// Decrypt decrypts a token.
+// Uses V2 protocol as default.
+func Decrypt(token string, key []byte, payload, footer interface{}) error {
+	return NewV2().Decrypt(token, key, payload, footer)
+}
+
+// Sign signs a token with the given private key. The key should be an ed25519.PrivateKey.
+// Uses V2 protocol as default.
+func Sign(privateKey crypto.PrivateKey, payload, footer interface{}) (string, error) {
+	return NewV2().Sign(privateKey, payload, footer)
+}
+
+// Verify verifies a token against the given public key. The key should be an ed25519.PublicKey.
+// Uses V2 protocol as default.
+func Verify(token string, publicKey crypto.PublicKey, value, footer interface{}) error {
+	return NewV2().Verify(token, publicKey, value, footer)
+}
+
 // Parse extracts the payload and footer from the token by calling either
 // Decrypt() or Verify(), depending on whether the token is public or private.
-// To parse public tokens you need to provide a map containing v1 and/or v2
+// To parse public tokens you need to provide a map containing V1 and/or V2
 // public keys, depending on the version of the token. To parse private tokens
 // you need to provide the symmetric key.
 func Parse(token string, payload, footer interface{},

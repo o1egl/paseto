@@ -9,6 +9,82 @@ import (
 	"golang.org/x/crypto/ed25519"
 )
 
+func TestEncrypt(t *testing.T) {
+	key := []byte("YELLOW SUBMARINE, BLACK WIZARDRY")
+	payload := []byte("payload")
+	footer := []byte("footer")
+
+	token, err := Encrypt(key, payload, footer)
+	if assert.NoError(t, err) {
+		var (
+			decryptedPayload []byte
+			decryptedFooter  []byte
+		)
+		if err = NewV2().Decrypt(token, key, &decryptedPayload, &decryptedFooter); assert.NoError(t, err) {
+			assert.Equal(t, payload, decryptedPayload)
+			assert.Equal(t, footer, decryptedFooter)
+		}
+	}
+}
+
+func TestDecrypt(t *testing.T) {
+	key := []byte("YELLOW SUBMARINE, BLACK WIZARDRY")
+	payload := []byte("payload")
+	footer := []byte("footer")
+
+	token, err := NewV2().Encrypt(key, payload, footer)
+	if assert.NoError(t, err) {
+		var (
+			decryptedPayload []byte
+			decryptedFooter  []byte
+		)
+		if err = Decrypt(token, key, &decryptedPayload, &decryptedFooter); assert.NoError(t, err) {
+			assert.Equal(t, payload, decryptedPayload)
+			assert.Equal(t, footer, decryptedFooter)
+		}
+	}
+}
+
+func TestSign(t *testing.T) {
+	b, _ := hex.DecodeString("b4cbfb43df4ce210727d953e4a713307fa19bb7d9f85041438d9e11b942a37741eb9dbbbbc047c03fd70604e0071f0987e16b28b757225c11f00415d0e20b1a2")
+	privateKey := ed25519.PrivateKey(b)
+
+	payload := []byte("payload")
+	footer := []byte("footer")
+
+	token, err := Sign(privateKey, payload, footer)
+	if assert.NoError(t, err) {
+		var (
+			decryptedPayload []byte
+			decryptedFooter  []byte
+		)
+		if err := NewV2().Verify(token, privateKey.Public(), &decryptedPayload, &decryptedFooter); assert.NoError(t, err) {
+			assert.Equal(t, payload, decryptedPayload)
+			assert.Equal(t, footer, decryptedFooter)
+		}
+	}
+}
+
+func TestVerify(t *testing.T) {
+	b, _ := hex.DecodeString("b4cbfb43df4ce210727d953e4a713307fa19bb7d9f85041438d9e11b942a37741eb9dbbbbc047c03fd70604e0071f0987e16b28b757225c11f00415d0e20b1a2")
+	privateKey := ed25519.PrivateKey(b)
+
+	payload := []byte("payload")
+	footer := []byte("footer")
+
+	token, err := NewV2().Sign(privateKey, payload, footer)
+	if assert.NoError(t, err) {
+		var (
+			decryptedPayload []byte
+			decryptedFooter  []byte
+		)
+		if err := Verify(token, privateKey.Public(), &decryptedPayload, &decryptedFooter); assert.NoError(t, err) {
+			assert.Equal(t, payload, decryptedPayload)
+			assert.Equal(t, footer, decryptedFooter)
+		}
+	}
+}
+
 func TestParse(t *testing.T) {
 	symmetricKey, _ := hex.DecodeString("707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f")
 
