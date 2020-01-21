@@ -82,7 +82,7 @@ check-fmt: | $(GOIMPORTS) ; $(info $(M) running goimports…) @ ## Check formatt
 	$Q diff -u <(echo -n) <($(GOIMPORTS) -d -local $(MODULE) $$(find . -type f -name '*.go' -not -path "./vendor/*"))
 
 .PHONY: check
-check: check-fmt lint test-race | $(info $(M) running all checks…) ## Run all checks
+check: check-fmt lint test-race ## Run all checks
 
 .PHONY: generate
 generate: | $(GO_ENUM) # Generate code
