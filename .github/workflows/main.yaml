@@ -1,0 +1,29 @@
+name: 'Main'
+on: push
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go: ['1.12.x', '1.13.x']
+    name: Go ${{ matrix.go }}
+    steps:
+      - uses: actions/checkout@master
+      - name: Setup go
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{ matrix.go }}
+      - name: Run tests
+        run: make test-race
+      - name: Run linters
+        run: make lint
+        if: matrix.go == '1.13.x'
+      - name: Generate coverage
+        run: make test-coverage
+        if: matrix.go == '1.13.x'
+      - name: Send coverage
+        uses: shogo82148/actions-goveralls@v1
+        with:
+          path-to-profile: coverage/profile.out
+        if: matrix.go == '1.13.x'
