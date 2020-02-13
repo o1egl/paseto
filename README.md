@@ -245,22 +245,23 @@ version, err := paseto.Parse(token, &payload, &footer, symmetricKey, map[paseto.
 For more information see *_test.go files.
 
 # Benchmarks
-MacBook Pro (Retina, 15-inch, Late 2013)
-CPU: 2,3 GHz Intel Core i7
-RAM: 16 GB 1600 MHz DDR3
-OS: macOS 10.14.1
-GO: 1.11.2
+MacBook Pro (15-inch, 2018)
+CPU: 2,6 GHz Intel Core i7
+RAM: 32 GB 2400 MHz DDR4
+OS: macOS 10.14.6
+GO: 1.13.7
+
 ```
 $ go test -bench . -benchmem
 
-Benchmark_V2_JSONToken_Encrypt-8          100000             11306 ns/op            5034 B/op         57 allocs/op
-Benchmark_V2_JSONToken_Decrypt-8          100000             11795 ns/op            2848 B/op         60 allocs/op
-Benchmark_V2_JSONToken_Sign-8              20000             71034 ns/op            4361 B/op         54 allocs/op
-Benchmark_V2_JSONToken_Verify-8            10000            167387 ns/op            2416 B/op         57 allocs/op
-Benchmark_V2_String_Encrypt-8             300000              3365 ns/op            2152 B/op         29 allocs/op
-Benchmark_V2_String_Decrypt-8            1000000              1854 ns/op            1512 B/op         22 allocs/op
-Benchmark_V2_String_Sign-8                 20000             60374 ns/op            1208 B/op         25 allocs/op
-Benchmark_V2_String_Verify-8               10000            156859 ns/op             776 B/op         18 allocs/op
+Benchmark_V2_JSONToken_Encrypt-12         137578              8532 ns/op            4186 B/op         59 allocs/op
+Benchmark_V2_JSONToken_Decrypt-12         139309              7970 ns/op            2048 B/op         63 allocs/op
+Benchmark_V2_JSONToken_Sign-12             21598             55817 ns/op            4426 B/op         60 allocs/op
+Benchmark_V2_JSONToken_Verify-12            8772            132142 ns/op            2528 B/op         64 allocs/op
+Benchmark_V2_String_Encrypt-12            544958              2051 ns/op            1176 B/op         23 allocs/op
+Benchmark_V2_String_Decrypt-12           1000000              1054 ns/op             568 B/op         18 allocs/op
+Benchmark_V2_String_Sign-12                25144             47645 ns/op            1144 B/op         23 allocs/op
+Benchmark_V2_String_Verify-12               9408            125524 ns/op             744 B/op         18 allocs/op
 ```
 
 # Supported PASETO Versions
