@@ -21,7 +21,7 @@ linters-settings:
   lll:
     line-length: 500
   goimports:
-    local-prefixes: github.com/shellagilehub/hazelnut-bob
+    local-prefixes: github.com/o1egl/paseto/v2
   gocritic:
     enabled-tags:
       - diagnostic
