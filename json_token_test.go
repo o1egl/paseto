@@ -7,7 +7,27 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	errors "golang.org/x/xerrors"
 )
+
+type StrInt int
+
+func (s StrInt) UnmarshalMap(v interface{}) (interface{}, error) {
+	if reflect.ValueOf(v).Kind() == reflect.String {
+		if v.(string) == "one" {
+			return 1, nil
+		}
+		return nil, errors.New("failed to parse value")
+	}
+	return v, nil
+}
+
+func (s StrInt) MarshalJSON() ([]byte, error) {
+	if s == 1 {
+		return []byte(`"one"`), nil
+	}
+	return nil, errors.New("unsupported value error")
+}
 
 func TestJsonToken(t *testing.T) {
 	symmetricKey := []byte("YELLOW SUBMARINE, BLACK WIZARDRY")
@@ -19,8 +39,9 @@ func TestJsonToken(t *testing.T) {
 	)
 
 	type CustomStruct struct {
-		Foo string
-		Bar int
+		Foo    string
+		Bar    int
+		StrInt StrInt
 	}
 
 	var (
@@ -48,12 +69,14 @@ func TestJsonToken(t *testing.T) {
 			"string_arr":     []string{"foo", "bar"},
 			"string_arr_nil": []string(nil),
 			"struct": CustomStruct{
-				Foo: "Baz",
-				Bar: 321,
+				Foo:    "Baz",
+				Bar:    321,
+				StrInt: 1,
 			},
 			"ptr": &CustomStruct{
-				Foo: "ptr Baz",
-				Bar: 456,
+				Foo:    "ptr Baz",
+				Bar:    456,
+				StrInt: 1,
 			},
 		}
 	)
