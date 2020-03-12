@@ -1,6 +1,6 @@
 module github.com/o1egl/paseto/v2
 
-go 1.13
+go 1.14
 
 require (
 	github.com/mitchellh/mapstructure v1.1.2
