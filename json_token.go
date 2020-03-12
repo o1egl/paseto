@@ -45,6 +45,30 @@ type JSONToken struct {
 	claims    map[string]interface{}
 }
 
+// MapUnmarshaler is the interface used in mapstructure decoder hook.
+type MapUnmarshaler interface {
+	// UnmarshalMap receives `v` from DecodeHookFunc.
+	// Returned value is used by mapstructure for further processing.
+	UnmarshalMap(interface{}) (interface{}, error)
+}
+
+func decodeHook(from, to reflect.Type, v interface{}) (interface{}, error) {
+	unmarshalerType := reflect.TypeOf((*MapUnmarshaler)(nil)).Elem()
+	if to.Implements(unmarshalerType) {
+		// invoke UnmarshalMap by name
+		if method, ok := to.MethodByName("UnmarshalMap"); ok {
+			in := []reflect.Value{reflect.New(to).Elem(), reflect.ValueOf(v)}
+			r := method.Func.Call(in)
+			if !r[1].IsNil() {
+				return nil, r[1].Interface().(error)
+			}
+			// get first return parameter and cast reflect.Value
+			v = r[0].Interface().(interface{})
+		}
+	}
+	return v, nil
+}
+
 // Get the value of the claim and uses reflection to store it in the value pointed to by v.
 // If the claim doesn't exist an ErrClaimNotFound error is returned
 func (t *JSONToken) Get(key string, v interface{}) error {
@@ -83,7 +107,14 @@ func (t *JSONToken) Get(key string, v interface{}) error {
 		}
 		*f = bytes
 	default:
-		if err := mapstructure.Decode(val, v); err != nil {
+		decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
+			DecodeHook: decodeHook,
+			Result:     v,
+		})
+		if err != nil {
+			return errors.Errorf("failed to create map decoder: %w", err)
+		}
+		if err := decoder.Decode(val); err != nil {
 			return errors.Errorf(`failed to cast value to %s: %v: %w`, reflect.TypeOf(v).String(), err, ErrTypeCast)
 		}
 	}
