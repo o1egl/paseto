@@ -110,6 +110,7 @@ func (t *JSONToken) Get(key string, v interface{}) error {
 		decoder, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
 			DecodeHook: decodeHook,
 			Result:     v,
+			TagName:    "json",
 		})
 		if err != nil {
 			return errors.Errorf("failed to create map decoder: %w", err)

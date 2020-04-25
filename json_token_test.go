@@ -41,7 +41,7 @@ func TestJsonToken(t *testing.T) {
 	type CustomStruct struct {
 		Foo    string
 		Bar    int
-		StrInt StrInt
+		StrInt StrInt `json:"custom_field"`
 	}
 
 	var (
