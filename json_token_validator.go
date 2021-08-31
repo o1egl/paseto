@@ -60,7 +60,7 @@ func ValidAt(t time.Time) Validator {
 			return errors.Errorf("token cannot be used yet: %w", ErrTokenValidationError)
 		}
 		if !token.Expiration.IsZero() && t.After(token.Expiration) {
-			return errors.Errorf("token has expired: %w", ErrTokenValidationError)
+			return errors.Errorf("token has expired: %w", ErrTokenExpiredError)
 		}
 		return nil
 	}
