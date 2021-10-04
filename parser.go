@@ -4,7 +4,6 @@
 package paseto
 
 import (
-	"crypto"
 	"strings"
 
 	errors "golang.org/x/xerrors"
@@ -35,25 +34,25 @@ var availableVersions = map[Version]Protocol{
 
 // Encrypt encrypts a token with a symmetric key. The key length must be 32.
 // Uses V2 protocol as default
-func Encrypt(key []byte, payload, footer interface{}) (string, error) {
+func Encrypt(key V2SymmetricKey, payload, footer interface{}) (string, error) {
 	return NewV2().Encrypt(key, payload, footer)
 }
 
 // Decrypt decrypts a token.
 // Uses V2 protocol as default.
-func Decrypt(token string, key []byte, payload, footer interface{}) error {
+func Decrypt(token string, key V2SymmetricKey, payload, footer interface{}) error {
 	return NewV2().Decrypt(token, key, payload, footer)
 }
 
 // Sign signs a token with the given private key. The key should be an ed25519.PrivateKey.
 // Uses V2 protocol as default.
-func Sign(privateKey crypto.PrivateKey, payload, footer interface{}) (string, error) {
+func Sign(privateKey V2AsymmetricSecretKey, payload, footer interface{}) (string, error) {
 	return NewV2().Sign(privateKey, payload, footer)
 }
 
 // Verify verifies a token against the given public key. The key should be an ed25519.PublicKey.
 // Uses V2 protocol as default.
-func Verify(token string, publicKey crypto.PublicKey, value, footer interface{}) error {
+func Verify(token string, publicKey V2AsymmetricPublicKey, value, footer interface{}) error {
 	return NewV2().Verify(token, publicKey, value, footer)
 }
 
@@ -63,7 +62,7 @@ func Verify(token string, publicKey crypto.PublicKey, value, footer interface{})
 // public keys, depending on the version of the token. To parse private tokens
 // you need to provide the symmetric key.
 func Parse(token string, payload, footer interface{},
-	symmetricKey []byte, publicKeys map[Version]crypto.PublicKey) (Version, error) {
+	symmetricKeys map[Version]SymmetricKey, publicKeys map[Version]AsymmetricPublicKey) (Version, error) {
 	parts := strings.Split(token, ".")
 	version, err := ParseVersion(parts[0])
 	if err != nil {
@@ -79,9 +78,14 @@ func Parse(token string, payload, footer interface{},
 	if err != nil {
 		return version, ErrUnsupportedTokenType
 	}
+
 	switch purpose {
 	case PurposeLocal:
-		return version, protocol.Decrypt(token, symmetricKey, payload, footer)
+		secretKey, found := symmetricKeys[version]
+		if !found {
+			return version, ErrSecretKeyNotFound
+		}
+		return version, protocol.Decrypt(token, secretKey, payload, footer)
 	case PurposePublic:
 		pubKey, found := publicKeys[version]
 		if !found {
