@@ -11,13 +11,15 @@ import (
 	"encoding/base64"
 	"io"
 
+	"golang.org/x/crypto/hkdf"
 	errors "golang.org/x/xerrors"
 )
 
 const (
-	nonceSize  = 32
-	macSize    = 48
-	v1SignSize = 256
+	nonceSize          = 32
+	macSize            = 48
+	v1SignSize         = 256
+	v1SymmetricKeySize = 32
 )
 
 var headerV1 = []byte("v1.local.")
@@ -31,6 +33,26 @@ type V1 struct {
 	nonce []byte
 }
 
+// V1SymmetricKey Version 1 Symmetric Key
+type V1SymmetricKey struct {
+	material []byte
+}
+
+// V1AsymmetricSecretKey Version 1 Private Key
+type V1AsymmetricSecretKey struct {
+	material rsa.PrivateKey
+}
+
+// Public returns the public key corresponding to priv.
+func (k V1AsymmetricSecretKey) Public() V1AsymmetricPublicKey {
+	return V1AsymmetricPublicKey{material: k.material.Public().(rsa.PublicKey)}
+}
+
+// V1AsymmetricPublicKey Version 1 Public Key
+type V1AsymmetricPublicKey struct {
+	material rsa.PublicKey
+}
+
 // NewV1 returns a v1 implementation of PASETO tokens.
 // You should not use PASETO v1 unless you need interoperability with for legacy
 // systems that cannot use modern cryptography.
@@ -39,7 +61,70 @@ func NewV1() *V1 {
 }
 
 // Encrypt implements Protocol.Encrypt
-func (p *V1) Encrypt(key []byte, payload, footer interface{}) (string, error) {
+func (p *V1) Encrypt(key SymmetricKey, payload, footer interface{}) (string, error) {
+	v1SymmetricKey, ok := key.(V1SymmetricKey)
+
+	if !ok {
+		return "", ErrWrongKeyType
+	}
+
+	return v1SymmetricKey.encrypt(payload, footer, p.nonce)
+}
+
+// Decrypt implements Protocol.Decrypt
+func (p *V1) Decrypt(token string, key SymmetricKey, payload, footer interface{}) error {
+	v1SymmetricKey, ok := key.(V1SymmetricKey)
+
+	if !ok {
+		return ErrWrongKeyType
+	}
+
+	return v1SymmetricKey.decrypt(token, payload, footer)
+}
+
+// Sign implements Protocol.Sign. privateKey should be of type *rsa.PrivateKey
+func (p *V1) Sign(privateKey AsymmetricSecretKey, payload, footer interface{}) (string, error) {
+	v1SecretKey, ok := privateKey.(V1AsymmetricSecretKey)
+
+	if !ok {
+		return "", ErrWrongKeyType
+	}
+
+	return v1SecretKey.sign(payload, footer)
+}
+
+// Verify implements Protocol.Verify. publicKey should be of type *rsa.PublicKey
+func (p *V1) Verify(token string, publicKey AsymmetricPublicKey, payload, footer interface{}) error {
+	v1PublicKey, ok := publicKey.(V1AsymmetricPublicKey)
+
+	if !ok {
+		return ErrWrongKeyType
+	}
+
+	return v1PublicKey.verify(token, payload, footer)
+}
+
+func (k *V1SymmetricKey) split(salt []byte) (encKey, authKey []byte, err error) {
+	eReader := hkdf.New(sha512.New384, k.material[:], salt, []byte("paseto-encryption-key"))
+	aReader := hkdf.New(sha512.New384, k.material[:], salt, []byte("paseto-auth-key-for-aead"))
+	encKey = make([]byte, 32)
+	authKey = make([]byte, 32)
+	if _, err = io.ReadFull(eReader, encKey); err != nil {
+		return nil, nil, err
+	}
+	if _, err = io.ReadFull(aReader, authKey); err != nil {
+		return nil, nil, err
+	}
+
+	return encKey, authKey, nil
+}
+
+// encrypt implements SymmetricKey.encrypt
+func (k V1SymmetricKey) encrypt(payload, footer interface{}, unitTestNonce []byte) (string, error) {
+	if len(k.material) != v1SymmetricKeySize {
+		return "", ErrWrongKeyLength
+	}
+
 	payloadBytes, err := infToByteArr(payload)
 	if err != nil {
 		return "", errors.Errorf("failed to encode payload to []byte: %w", err)
@@ -52,8 +137,8 @@ func (p *V1) Encrypt(key []byte, payload, footer interface{}) (string, error) {
 
 	var rndBytes []byte
 
-	if p.nonce != nil {
-		rndBytes = p.nonce
+	if unitTestNonce != nil {
+		rndBytes = unitTestNonce
 	} else {
 		rndBytes = make([]byte, nonceSize)
 		if _, err := io.ReadFull(rand.Reader, rndBytes); err != nil { //nolint:govet
@@ -67,7 +152,7 @@ func (p *V1) Encrypt(key []byte, payload, footer interface{}) (string, error) {
 	}
 	nonce := macN.Sum(nil)[:32]
 
-	encKey, authKey, err := splitKey(key, nonce[:16])
+	encKey, authKey, err := k.split(nonce[:16])
 	if err != nil {
 		return "", errors.Errorf("failed to create enc and auth keys: %w", err)
 	}
@@ -95,8 +180,12 @@ func (p *V1) Encrypt(key []byte, payload, footer interface{}) (string, error) {
 	return createToken(headerV1, body, footerBytes), nil
 }
 
-// Decrypt implements Protocol.Decrypt
-func (p *V1) Decrypt(token string, key []byte, payload, footer interface{}) error {
+// decrypt implements SymmetricKey.decrypt
+func (k V1SymmetricKey) decrypt(token string, payload interface{}, footer interface{}) error {
+	if len(k.material) != v1SymmetricKeySize {
+		return ErrWrongKeyLength
+	}
+
 	data, footerBytes, err := splitToken([]byte(token), headerV1)
 	if err != nil {
 		return errors.Errorf("failed to decode token: %w", err)
@@ -110,7 +199,7 @@ func (p *V1) Decrypt(token string, key []byte, payload, footer interface{}) erro
 	encryptedPayload := data[nonceSize : len(data)-(macSize)]
 	mac := data[len(data)-macSize:]
 
-	encKey, authKey, err := splitKey(key, nonce[:16])
+	encKey, authKey, err := k.split(nonce[:16])
 	if err != nil {
 		return errors.Errorf("failed to create enc and auth keys: %w", err)
 	}
@@ -146,13 +235,8 @@ func (p *V1) Decrypt(token string, key []byte, payload, footer interface{}) erro
 	return nil
 }
 
-// Sign implements Protocol.Sign. privateKey should be of type *rsa.PrivateKey
-func (p *V1) Sign(privateKey crypto.PrivateKey, payload, footer interface{}) (string, error) {
-	rsaPrivateKey, ok := privateKey.(*rsa.PrivateKey)
-	if !ok {
-		return "", ErrIncorrectPrivateKeyType
-	}
-
+// sign implements AsymmetricSecretKey.sign
+func (k V1AsymmetricSecretKey) sign(payload, footer interface{}) (string, error) {
 	payloadBytes, err := infToByteArr(payload)
 	if err != nil {
 		return "", errors.Errorf("failed to encode payload to []byte: %w", err)
@@ -173,7 +257,7 @@ func (p *V1) Sign(privateKey crypto.PrivateKey, payload, footer interface{}) (st
 	}
 	hashed := pssHash.Sum(nil)
 
-	signature, err := rsa.SignPSS(rand.Reader, rsaPrivateKey, sha384, hashed, &opts)
+	signature, err := rsa.SignPSS(rand.Reader, &k.material, sha384, hashed, &opts)
 	if err != nil {
 		return "", errors.Errorf("failed to sign token: %w", err)
 	}
@@ -183,13 +267,8 @@ func (p *V1) Sign(privateKey crypto.PrivateKey, payload, footer interface{}) (st
 	return createToken(headerV1Public, body, footerBytes), nil
 }
 
-// Verify implements Protocol.Verify. publicKey should be of type *rsa.PublicKey
-func (p *V1) Verify(token string, publicKey crypto.PublicKey, payload, footer interface{}) error {
-	rsaPublicKey, ok := publicKey.(*rsa.PublicKey)
-	if !ok {
-		return ErrIncorrectPublicKeyType
-	}
-
+// verify implements AsymmetricPublicKey.verify
+func (k V1AsymmetricPublicKey) verify(token string, payload, footer interface{}) error {
 	data, footerBytes, err := splitToken([]byte(token), headerV1Public)
 	if err != nil {
 		return errors.Errorf("failed to decode token: %w", err)
@@ -212,7 +291,7 @@ func (p *V1) Verify(token string, publicKey crypto.PublicKey, payload, footer in
 	}
 	hashed := pssHash.Sum(nil)
 
-	if err = rsa.VerifyPSS(rsaPublicKey, sha384, hashed, signature, &opts); err != nil {
+	if err = rsa.VerifyPSS(&k.material, sha384, hashed, signature, &opts); err != nil {
 		return ErrInvalidSignature
 	}
 
