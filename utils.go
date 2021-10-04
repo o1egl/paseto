@@ -2,12 +2,9 @@ package paseto
 
 import (
 	"bytes"
-	"crypto/sha512"
 	"encoding/binary"
 	"encoding/json"
-	"io"
 
-	"golang.org/x/crypto/hkdf"
 	errors "golang.org/x/xerrors"
 )
 
@@ -27,21 +24,6 @@ func preAuthEncode(pieces ...[]byte) []byte {
 		buf.Write(p)
 	}
 	return buf.Bytes()
-}
-
-func splitKey(key, salt []byte) (encKey, authKey []byte, err error) {
-	eReader := hkdf.New(sha512.New384, key, salt, []byte("paseto-encryption-key"))
-	aReader := hkdf.New(sha512.New384, key, salt, []byte("paseto-auth-key-for-aead"))
-	encKey = make([]byte, 32)
-	authKey = make([]byte, 32)
-	if _, err = io.ReadFull(eReader, encKey); err != nil {
-		return nil, nil, err
-	}
-	if _, err = io.ReadFull(aReader, authKey); err != nil {
-		return nil, nil, err
-	}
-
-	return encKey, authKey, nil
 }
 
 func splitToken(token, header []byte) (payload, footer []byte, err error) {
