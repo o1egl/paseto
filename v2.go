@@ -33,22 +33,22 @@ type V2 struct {
 	nonce []byte
 }
 
-// V2SymmetricKey Version 2 Symmetric Key
+// V2SymmetricKey Version 2 Symmetric Key. This should be a byte slice of 32 bytes.
 type V2SymmetricKey struct {
 	material []byte
 }
 
-// V2AsymmetricSecretKey Version 2 Private Key
+// V2AsymmetricSecretKey Version 2 Private Key. For v2, the key should be an ed25519.PrivateKey.
 type V2AsymmetricSecretKey struct {
 	material ed25519.PrivateKey
 }
 
-// Public returns the public key corresponding to priv.
+// Public returns the public key corresponding to private key.
 func (k V2AsymmetricSecretKey) Public() V2AsymmetricPublicKey {
 	return V2AsymmetricPublicKey{material: k.material.Public().(ed25519.PublicKey)}
 }
 
-// V2AsymmetricPublicKey Version 2 Public Key
+// V2AsymmetricPublicKey Version 2 Public Key. For v2, the key should be an ed25519.PublicKey.
 type V2AsymmetricPublicKey struct {
 	material ed25519.PublicKey
 }

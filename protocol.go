@@ -31,47 +31,42 @@ var (
 	ErrTokenValidationError = errors.New("token validation error")
 )
 
+// SymmetricKey Generic Symmetric Key
 type SymmetricKey interface {
 
-	// Encrypt encrypts a token with a symmetric key. The key should be a byte
-	// slice of 32 bytes, regardless of whether PASETO v1 or v2 is being used.
+	// Encrypt encrypts a token with a symmetric key.
 	encrypt(payload interface{}, footer interface{}, unitTestNonce []byte) (string, error)
 
 	// Decrypt decrypts a token which was encrypted with a symmetric key.
 	decrypt(token string, payload interface{}, footer interface{}) error
 }
 
+// AsymmetricSecretKey Generic Asymmetric Private Key
 type AsymmetricSecretKey interface {
 
-	// Sign signs a token with the given private key. For PASETO v1, the key should
-	// be an rsa.PrivateKey. For v2, the key should be an ed25519.PrivateKey.
+	// Sign signs a token with the given private key
 	sign(payload interface{}, footer interface{}) (string, error)
 }
 
+// AsymmetricPublicKey Generic Asymmetric Public Key
 type AsymmetricPublicKey interface {
 
-	// Verify verifies a token against the given public key. For PASETO v1, the key
-	// key should be an rsa.PublicKey. For v2, the key should be an
-	// ed25519.PublicKey.
+	// Verify verifies a token against the given public key
 	verify(token string, value interface{}, footer interface{}) error
 }
 
 // Protocol defines the PASETO token protocol interface.
 type Protocol interface {
 
-	// Encrypt encrypts a token with a symmetric key. The key should be a byte
-	// slice of 32 bytes, regardless of whether PASETO v1 or v2 is being used.
+	// Encrypt encrypts a token with a symmetric key
 	Encrypt(key SymmetricKey, payload interface{}, footer interface{}) (string, error)
 
-	// Decrypt decrypts a token which was encrypted with a symmetric key.
+	// Decrypt decrypts a token which was encrypted with a symmetric key
 	Decrypt(token string, key SymmetricKey, payload interface{}, footer interface{}) error
 
-	// Sign signs a token with the given private key. For PASETO v1, the key should
-	// be an rsa.PrivateKey. For v2, the key should be an ed25519.PrivateKey.
+	// Sign signs a token with the given private key
 	Sign(privateKey AsymmetricSecretKey, payload interface{}, footer interface{}) (string, error)
 
-	// Verify verifies a token against the given public key. For PASETO v1, the key
-	// key should be an rsa.PublicKey. For v2, the key should be an
-	// ed25519.PublicKey.
+	// Verify verifies a token against the given public key
 	Verify(token string, publicKey AsymmetricPublicKey, value interface{}, footer interface{}) error
 }

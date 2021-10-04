@@ -33,22 +33,22 @@ type V1 struct {
 	nonce []byte
 }
 
-// V1SymmetricKey Version 1 Symmetric Key
+// V1SymmetricKey Version 1 Symmetric Key. This should be a byte slice of 32 bytes.
 type V1SymmetricKey struct {
 	material []byte
 }
 
-// V1AsymmetricSecretKey Version 1 Private Key
+// V1AsymmetricSecretKey Version 1 Private Key. For PASETO v1, the key should be an rsa.PrivateKey.
 type V1AsymmetricSecretKey struct {
 	material rsa.PrivateKey
 }
 
-// Public returns the public key corresponding to priv.
+// Public returns the public key corresponding to private key.
 func (k V1AsymmetricSecretKey) Public() V1AsymmetricPublicKey {
 	return V1AsymmetricPublicKey{material: k.material.Public().(rsa.PublicKey)}
 }
 
-// V1AsymmetricPublicKey Version 1 Public Key
+// V1AsymmetricPublicKey Version 1 Public Key. For PASETO v1, the key should be an rsa.PublicKey.
 type V1AsymmetricPublicKey struct {
 	material rsa.PublicKey
 }
