@@ -2,7 +2,6 @@ package paseto
 
 import (
 	"bytes"
-	"crypto"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/hex"
@@ -157,7 +156,7 @@ func TestPasetoV1_Encrypt_Compatibility(t *testing.T) {
 	for name, test := range cases {
 		t.Run(name, func(t *testing.T) {
 			v1.nonce = test.nonce
-			if token, err := v1.Encrypt(test.key, test.payload, test.footer); assert.NoError(t, err) {
+			if token, err := v1.Encrypt(V1SymmetricKey{material: test.key}, test.payload, test.footer); assert.NoError(t, err) {
 				assert.Equal(t, test.token, token)
 			}
 		})
@@ -247,7 +246,7 @@ func TestPasetoV1_Decrypt_Compatibility(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			var payload []byte
 			var footer []byte
-			if assert.NoError(t, v1.Decrypt(test.token, test.key, &payload, &footer)) {
+			if assert.NoError(t, v1.Decrypt(test.token, V1SymmetricKey{material: test.key}, &payload, &footer)) {
 				assert.Equal(t, test.payload, payload, "Payload does not match")
 				assert.Equal(t, test.footer, footer, "Footer does not match")
 			}
@@ -256,7 +255,9 @@ func TestPasetoV1_Decrypt_Compatibility(t *testing.T) {
 }
 
 func TestPasetoV1_EncryptDecrypt(t *testing.T) {
-	testEncryptDecrypt(t, NewV1())
+	key, _ := hex.DecodeString("707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f")
+
+	testEncryptDecrypt(t, NewV1(), V1SymmetricKey{material: key})
 }
 
 func TestPasetoV1_Decrypt_Error(t *testing.T) {
@@ -309,37 +310,14 @@ func TestPasetoV1_Decrypt_Error(t *testing.T) {
 
 	for name, test := range cases {
 		t.Run(name, func(t *testing.T) {
-			err := v1.Decrypt(test.token, symmetricKey, test.payload, test.footer)
+			err := v1.Decrypt(test.token, V1SymmetricKey{material: symmetricKey}, test.payload, test.footer)
 			assert.Truef(t, errors.Is(err, test.error), "want: %s,\n got: %s", test.error, err)
 		})
 	}
 }
 
 func TestPasetoV1_SignVerify(t *testing.T) {
-	testSign(t, NewV1(), rsaPrivateKey, rsaPublicKey)
-}
-
-func TestPasetoV1_Sign_Error(t *testing.T) {
-	v1 := NewV1()
-
-	cases := map[string]struct {
-		key     crypto.PrivateKey
-		payload interface{}
-		footer  interface{}
-		err     error
-	}{
-		"Invalid key": {
-			key: "incorrect",
-			err: ErrIncorrectPrivateKeyType,
-		},
-	}
-
-	for name, test := range cases {
-		t.Run(name, func(t *testing.T) {
-			_, err := v1.Sign(test.key, test.payload, test.footer)
-			assert.EqualError(t, err, test.err.Error())
-		})
-	}
+	testSign(t, NewV1(), V1AsymmetricSecretKey{material: *rsaPrivateKey}, V1AsymmetricPublicKey{material: *rsaPublicKey})
 }
 
 func TestPasetoV1_Verify_Error(t *testing.T) {
@@ -377,7 +355,7 @@ func TestPasetoV1_Verify_Error(t *testing.T) {
 
 	for name, test := range cases {
 		t.Run(name, func(t *testing.T) {
-			err := v1.Verify(test.token, rsaPublicKey, test.payload, test.footer)
+			err := v1.Verify(test.token, V1AsymmetricPublicKey{material: *rsaPublicKey}, test.payload, test.footer)
 			assert.Truef(t, errors.Is(err, test.error), "want: %s, got %s", test.error, err)
 		})
 	}

@@ -1,15 +1,13 @@
 package paseto
 
 import (
-	"crypto"
-	"encoding/hex"
 	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func testEncryptDecrypt(t *testing.T, impl Protocol) {
+func testEncryptDecrypt(t *testing.T, impl Protocol, key SymmetricKey) {
 	t.Helper()
 	type Case struct {
 		payload         interface{}
@@ -17,8 +15,6 @@ func testEncryptDecrypt(t *testing.T, impl Protocol) {
 		obtainedPayload interface{}
 		obtainedFooter  interface{}
 	}
-
-	key, _ := hex.DecodeString("707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f")
 
 	cases := map[string]Case{
 		"struct payload, struct footer": {
@@ -66,7 +62,7 @@ func testEncryptDecrypt(t *testing.T, impl Protocol) {
 	})
 }
 
-func testSign(t *testing.T, impl Protocol, privateKey crypto.PrivateKey, publicKey crypto.PublicKey) {
+func testSign(t *testing.T, impl Protocol, privateKey AsymmetricSecretKey, publicKey AsymmetricPublicKey) {
 	t.Helper()
 
 	cases := map[string]struct {
