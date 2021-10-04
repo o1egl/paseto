@@ -167,7 +167,7 @@ During the encoding process, a payload of type string and []byte is used without
 
 ## Create token using symmetric key (local mode): 
 ```go
-symmetricKey := V2SymmetricKey{
+symmetricKey := paseto.V2SymmetricKey{
   material: []byte("YELLOW SUBMARINE, BLACK WIZARDRY"), // Must be 32 bytes
 }
 now := time.Now()
@@ -200,10 +200,10 @@ err := paseto.Decrypt(token, symmetricKey, &newJsonToken, &newFooter)
 ## Create token using asymetric key (public mode): 
 ```go
 b, _ := hex.DecodeString("b4cbfb43df4ce210727d953e4a713307fa19bb7d9f85041438d9e11b942a37741eb9dbbbbc047c03fd70604e0071f0987e16b28b757225c11f00415d0e20b1a2")
-privateKey := V2AsymmetricSecretKey{material: ed25519.PrivateKey(b)}
+privateKey := paseto.V2AsymmetricSecretKey{material: ed25519.PrivateKey(b)}
 
 b, _ = hex.DecodeString("1eb9dbbbbc047c03fd70604e0071f0987e16b28b757225c11f00415d0e20b1a2")
-publicKey := V2AsymmetricPublicKey{material: ed25519.PublicKey(b)}
+publicKey := paseto.V2AsymmetricPublicKey{material: ed25519.PublicKey(b)}
 
 // or create a new keypair 
 // publicKey, privateKey, err := ed25519.GenerateKey(nil)
@@ -230,10 +230,10 @@ err := paseto.Verify(token, publicKey, &newJsonToken, &newFooter)
 **IMPORTANT**: Version 1 of the protocol is deprecated
 
 ```go
-v1SymmetricKey := V1SymmetricKey{
+v1SymmetricKey := paseto.V1SymmetricKey{
   material: []byte("YELLOW SUBMARINE, BLACK WIZARDRY"), // Must be 32 bytes
 }
-v2SymmetricKey := V2SymmetricKey{
+v2SymmetricKey := paseto.V2SymmetricKey{
   material: []byte("YELLOW SUBMARINE, BLACK WIZARDRY"), // Must be 32 bytes
 }
 b, err := hex.DecodeString("2d2d2d2d2d424547494e205055424c4943204b45592d2d2d2d2d0d0a4d494942496a414e42676b71686b6947397730424151454641414f43415138414d49494243674b43415145417878636e47724e4f6136426c41523458707050640d0a746146576946386f7279746c4b534d6a66446831314c687956627a4335416967556b706a457274394d7649482f46384d444a72324f39486b36594b454b574b6f0d0a72333566364b6853303679357a714f722b7a4e34312b39626a52365633322b527345776d5a737a3038375258764e41334e687242633264593647736e57336c5a0d0a34356f5341564a755639553667335a334a574138355972362b6350776134793755632f56726f6d7a674679627355656e33476f724254626a783142384f514a440d0a73652f4b6b6855433655693358384264514f473974523455454775742f6c39703970732b3661474d4c57694357495a54615456784d4f75653133596b777038740d0a3148467635747a6872493055635948687638464a6b315a6435386759464158634e797975737834346e6a6152594b595948646e6b4f6a486e33416b534c4d306b0d0a6c774944415141420d0a2d2d2d2d2d454e44205055424c4943204b45592d2d2d2d2d")
@@ -251,11 +251,11 @@ version, err := paseto.Parse(
   token,
   &payload,
   &footer,
-  map[Version]SymmetricKey{
+  map[paseto.VersionVersion]paseto.SymmetricKey{
     paseto.V1: v1SymmetricKey,
     paseto.V2: v2SymmetricKey,
   },
-  map[paseto.Version]AsymmetricPublicKey{
+  map[paseto.Version]paseto.AsymmetricPublicKey{
     paseto.V1: v1PublicKey,
     paseto.V2: v2PublicKey,
   }
