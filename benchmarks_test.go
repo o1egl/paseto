@@ -10,7 +10,7 @@ import (
 
 // JSONToken
 func Benchmark_V2_JSONToken_Encrypt(b *testing.B) {
-	symmetricKey := []byte("YELLOW SUBMARINE, BLACK WIZARDRY")
+	symmetricKey := V2SymmetricKey{material: []byte("YELLOW SUBMARINE, BLACK WIZARDRY")}
 	now := time.Now()
 	exp := now.Add(24 * time.Hour)
 	nbt := now
@@ -36,7 +36,7 @@ func Benchmark_V2_JSONToken_Encrypt(b *testing.B) {
 }
 
 func Benchmark_V2_JSONToken_Decrypt(b *testing.B) {
-	symmetricKey := []byte("YELLOW SUBMARINE, BLACK WIZARDRY")
+	symmetricKey := V2SymmetricKey{material: []byte("YELLOW SUBMARINE, BLACK WIZARDRY")}
 	//nolint:gosec
 	token := "v2.local.Ydp5u4gIRRR6u7Nvdb64qJs1W2wKSHNNEmi0LCnuZ9s-j74qrYu77tMzbUZvILPQE9Pl3OxPo246BUqQQ38YbZtQ2Stw8SJbvSbwF7npAjMkTx4leorq-bez8i9jLuyv7dHy8F4JaN8XxoNSpQdKI4Gn567sY-YxvBDTcEtM-VwRfe6vXHk_QG6pfil0hemk3zOAHPq0GxCA_uQnx6ggYN4mP_rqKdYV2P6Myf9nZmc-sw1hHCMSZegx6OH1nrKzvzMA9Y2ZO_tsg8IACz_wG2Mk.Zm9vdGVy"
 
@@ -53,7 +53,7 @@ func Benchmark_V2_JSONToken_Decrypt(b *testing.B) {
 
 func Benchmark_V2_JSONToken_Sign(b *testing.B) {
 	bb, _ := hex.DecodeString("b4cbfb43df4ce210727d953e4a713307fa19bb7d9f85041438d9e11b942a37741eb9dbbbbc047c03fd70604e0071f0987e16b28b757225c11f00415d0e20b1a2")
-	privateKey := ed25519.PrivateKey(bb)
+	privateKey := V2AsymmetricSecretKey{material: ed25519.PrivateKey(bb)}
 
 	now := time.Now()
 	exp := now.Add(24 * time.Hour)
@@ -82,7 +82,7 @@ func Benchmark_V2_JSONToken_Sign(b *testing.B) {
 func Benchmark_V2_JSONToken_Verify(b *testing.B) {
 	//nolint:gosec
 	bb, _ := hex.DecodeString("1eb9dbbbbc047c03fd70604e0071f0987e16b28b757225c11f00415d0e20b1a2")
-	publicKey := ed25519.PublicKey(bb)
+	publicKey := V2AsymmetricPublicKey{material: ed25519.PublicKey(bb)}
 	//nolint:gosec
 	token := "v2.public.eyJhdWQiOiJ0ZXN0IiwiZXhwIjoiMjAxOC0wMy0xMlQyMTo1Njo1MSswMTowMCIsImlhdCI6IjIwMTgtMDMtMTFUMjE6NTY6NTErMDE6MDAiLCJpc3MiOiJ0ZXN0X3NlcnZpY2UiLCJqdGkiOiIxMjMiLCJuYmYiOiIyMDE4LTAzLTExVDIxOjU2OjUxKzAxOjAwIiwic3ViIjoidGVzdF9zdWJqZWN0In24L0oWXbztBIdJYgAzsMqb2_0zDTNu65YRAOwn3Ux8tvepyynlYmAQB1yhvh6MIKl1BecuKmg1QzN2YRcGZi8O.Zm9vdGVy"
 
@@ -99,7 +99,7 @@ func Benchmark_V2_JSONToken_Verify(b *testing.B) {
 
 // String
 func Benchmark_V2_String_Encrypt(b *testing.B) {
-	symmetricKey := []byte("YELLOW SUBMARINE, BLACK WIZARDRY")
+	symmetricKey := V2SymmetricKey{material: []byte("YELLOW SUBMARINE, BLACK WIZARDRY")}
 
 	const (
 		payload = "payload"
@@ -115,7 +115,7 @@ func Benchmark_V2_String_Encrypt(b *testing.B) {
 }
 
 func Benchmark_V2_String_Decrypt(b *testing.B) {
-	symmetricKey := []byte("YELLOW SUBMARINE, BLACK WIZARDRY")
+	symmetricKey := V2SymmetricKey{material: []byte("YELLOW SUBMARINE, BLACK WIZARDRY")}
 	//nolint:gosec
 	token := "v2.local.VxvYfYL-KSCBaNC8toZUWgoqYHveHjypGx87pqUi0e69gKNAApe3sVkAog30zAc.Zm9vdGVy"
 
@@ -132,7 +132,7 @@ func Benchmark_V2_String_Decrypt(b *testing.B) {
 
 func Benchmark_V2_String_Sign(b *testing.B) {
 	bb, _ := hex.DecodeString("b4cbfb43df4ce210727d953e4a713307fa19bb7d9f85041438d9e11b942a37741eb9dbbbbc047c03fd70604e0071f0987e16b28b757225c11f00415d0e20b1a2")
-	privateKey := ed25519.PrivateKey(bb)
+	privateKey := V2AsymmetricSecretKey{material: ed25519.PrivateKey(bb)}
 
 	const (
 		payload = "payload"
@@ -149,7 +149,7 @@ func Benchmark_V2_String_Sign(b *testing.B) {
 
 func Benchmark_V2_String_Verify(b *testing.B) {
 	bb, _ := hex.DecodeString("1eb9dbbbbc047c03fd70604e0071f0987e16b28b757225c11f00415d0e20b1a2")
-	publicKey := ed25519.PublicKey(bb)
+	publicKey := V2AsymmetricPublicKey{material: ed25519.PublicKey(bb)}
 	//nolint:gosec
 	token := "v2.public.cGF5bG9hZP9crS7uGme2zSTkJ3kiamT0u6jN4qhKhiS0IWNi0sx-pS62QYJEHijhQGsCWRZ3JnoIBmLj6tawpN2Xd050pQg.Zm9vdGVy"
 

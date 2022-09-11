@@ -2,7 +2,6 @@ package paseto
 
 import (
 	"bytes"
-	"crypto"
 	"encoding/hex"
 	"testing"
 
@@ -105,7 +104,7 @@ func TestPasetoV2_Encrypt_Compatibility(t *testing.T) {
 	for name, test := range cases {
 		t.Run(name, func(t *testing.T) {
 			v2.nonce = test.nonce
-			if token, err := v2.Encrypt(test.key, test.payload, test.footer); assert.NoError(t, err) {
+			if token, err := v2.Encrypt(V2SymmetricKey{material: test.key}, test.payload, test.footer); assert.NoError(t, err) {
 				assert.Equal(t, test.token, token)
 			}
 		})
@@ -156,7 +155,7 @@ func TestPasetoV2_Sign_Compatibility(t *testing.T) {
 
 	for name, test := range cases {
 		t.Run(name, func(t *testing.T) {
-			if genToken, err := v2.Sign(privateKey, test.payload, test.footer); assert.NoError(t, err) {
+			if genToken, err := v2.Sign(V2AsymmetricSecretKey{material: privateKey}, test.payload, test.footer); assert.NoError(t, err) {
 				assert.Equal(t, test.token, genToken)
 			}
 		})
@@ -164,7 +163,9 @@ func TestPasetoV2_Sign_Compatibility(t *testing.T) {
 }
 
 func TestPasetoV2_EncryptDecrypt(t *testing.T) {
-	testEncryptDecrypt(t, NewV2())
+	key, _ := hex.DecodeString("707172737475767778797a7b7c7d7e7f808182838485868788898a8b8c8d8e8f")
+
+	testEncryptDecrypt(t, NewV2(), V2SymmetricKey{material: key})
 }
 
 func TestPasetoV2_SignVerify(t *testing.T) {
@@ -174,7 +175,7 @@ func TestPasetoV2_SignVerify(t *testing.T) {
 	b, _ = hex.DecodeString("1eb9dbbbbc047c03fd70604e0071f0987e16b28b757225c11f00415d0e20b1a2")
 	publicKey := ed25519.PublicKey(b)
 
-	testSign(t, NewV2(), privateKey, publicKey)
+	testSign(t, NewV2(), V2AsymmetricSecretKey{material: privateKey}, V2AsymmetricPublicKey{material: publicKey})
 }
 
 func TestPasetoV2_Verify_Error(t *testing.T) {
@@ -184,7 +185,7 @@ func TestPasetoV2_Verify_Error(t *testing.T) {
 
 	cases := map[string]struct {
 		token     string
-		publicKey crypto.PublicKey
+		publicKey ed25519.PublicKey
 		payload   interface{}
 		footer    interface{}
 		error     error
@@ -217,12 +218,12 @@ func TestPasetoV2_Verify_Error(t *testing.T) {
 			footer:    sPtr(""),
 			error:     ErrIncorrectTokenFormat,
 		},
-		"ErrIncorrectPublicKeyType": {
+		"ErrWrongKeyLength": {
 			token:     "v2.public.eyJOYW1lIj.oiSm9o.biIsIkF",
-			publicKey: "hello",
+			publicKey: ed25519.PublicKey("hello"),
 			payload:   nil,
 			footer:    nil,
-			error:     ErrIncorrectPublicKeyType,
+			error:     ErrWrongKeyLength,
 		},
 		"ErrInvalidSignature": {
 			token:     "v2.public.RnJhbmsgRGVuaXMgcm9ja3O7MPuu90WKNyvBUUhAGFmi4PiPOr2bN2ytUSU-QWlj8eNefki2MubssfN1b8figynnY0WusRPwIQ-o0HSZOS0F",
@@ -235,7 +236,7 @@ func TestPasetoV2_Verify_Error(t *testing.T) {
 
 	for name, test := range cases {
 		t.Run(name, func(t *testing.T) {
-			err := v2.Verify(test.token, test.publicKey, test.payload, test.footer)
+			err := v2.Verify(test.token, V2AsymmetricPublicKey{material: test.publicKey}, test.payload, test.footer)
 			assert.Truef(t, errors.Is(err, test.error), "want: %s, got %s", test.error, err)
 		})
 	}
@@ -291,7 +292,7 @@ func TestPasetoV2_Decrypt_Error(t *testing.T) {
 
 	for name, test := range cases {
 		t.Run(name, func(t *testing.T) {
-			err := v2.Decrypt(test.token, symmetricKey, test.payload, test.footer)
+			err := v2.Decrypt(test.token, V2SymmetricKey{material: symmetricKey}, test.payload, test.footer)
 			assert.Truef(t, errors.Is(err, test.error), "want: %s, got %s", test.error, err)
 		})
 	}
@@ -301,20 +302,20 @@ func TestPasetoV2_Sign_Error(t *testing.T) {
 	v2 := NewV2()
 
 	cases := map[string]struct {
-		key     crypto.PrivateKey
+		key     ed25519.PrivateKey
 		payload interface{}
 		footer  interface{}
 		err     error
 	}{
 		"Invalid key": {
-			key: "incorrect",
-			err: ErrIncorrectPrivateKeyType,
+			key: ed25519.PrivateKey("incorrect"),
+			err: ErrWrongKeyLength,
 		},
 	}
 
 	for name, test := range cases {
 		t.Run(name, func(t *testing.T) {
-			_, err := v2.Sign(test.key, test.payload, test.footer)
+			_, err := v2.Sign(V2AsymmetricSecretKey{material: test.key}, test.payload, test.footer)
 			assert.EqualError(t, err, test.err.Error())
 		})
 	}

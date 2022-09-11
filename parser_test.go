@@ -1,7 +1,6 @@
 package paseto
 
 import (
-	"crypto"
 	"encoding/hex"
 	"testing"
 
@@ -10,7 +9,7 @@ import (
 )
 
 func TestEncrypt(t *testing.T) {
-	key := []byte("YELLOW SUBMARINE, BLACK WIZARDRY")
+	key := V2SymmetricKey{material: []byte("YELLOW SUBMARINE, BLACK WIZARDRY")}
 	payload := []byte("payload")
 	footer := []byte("footer")
 
@@ -28,7 +27,7 @@ func TestEncrypt(t *testing.T) {
 }
 
 func TestDecrypt(t *testing.T) {
-	key := []byte("YELLOW SUBMARINE, BLACK WIZARDRY")
+	key := V2SymmetricKey{material: []byte("YELLOW SUBMARINE, BLACK WIZARDRY")}
 	payload := []byte("payload")
 	footer := []byte("footer")
 
@@ -47,7 +46,7 @@ func TestDecrypt(t *testing.T) {
 
 func TestSign(t *testing.T) {
 	b, _ := hex.DecodeString("b4cbfb43df4ce210727d953e4a713307fa19bb7d9f85041438d9e11b942a37741eb9dbbbbc047c03fd70604e0071f0987e16b28b757225c11f00415d0e20b1a2")
-	privateKey := ed25519.PrivateKey(b)
+	privateKey := V2AsymmetricSecretKey{material: ed25519.PrivateKey(b)}
 
 	payload := []byte("payload")
 	footer := []byte("footer")
@@ -67,7 +66,7 @@ func TestSign(t *testing.T) {
 
 func TestVerify(t *testing.T) {
 	b, _ := hex.DecodeString("b4cbfb43df4ce210727d953e4a713307fa19bb7d9f85041438d9e11b942a37741eb9dbbbbc047c03fd70604e0071f0987e16b28b757225c11f00415d0e20b1a2")
-	privateKey := ed25519.PrivateKey(b)
+	privateKey := V2AsymmetricSecretKey{material: ed25519.PrivateKey(b)}
 
 	payload := []byte("payload")
 	footer := []byte("footer")
@@ -121,13 +120,25 @@ func TestParse(t *testing.T) {
 	}
 
 	b, _ := hex.DecodeString("1eb9dbbbbc047c03fd70604e0071f0987e16b28b757225c11f00415d0e20b1a2")
-	v2PublicKey := ed25519.PublicKey(b)
+	v2PublicKey := V2AsymmetricPublicKey{material: ed25519.PublicKey(b)}
 
 	for name, test := range cases {
 		t.Run(name, func(t *testing.T) {
 			var payload []byte
 			var footer []byte
-			if ver, err := Parse(test.token, &payload, &footer, symmetricKey, map[Version]crypto.PublicKey{VersionV1: rsaPublicKey, VersionV2: v2PublicKey}); assert.NoError(t, err) {
+			if ver, err := Parse(
+				test.token,
+				&payload,
+				&footer,
+				map[Version]SymmetricKey{
+					VersionV1: V1SymmetricKey{material: symmetricKey},
+					VersionV2: V2SymmetricKey{material: symmetricKey},
+				},
+				map[Version]AsymmetricPublicKey{
+					VersionV1: V1AsymmetricPublicKey{material: *rsaPublicKey},
+					VersionV2: v2PublicKey,
+				},
+			); assert.NoError(t, err) {
 				assert.Equal(t, test.version, ver)
 				assert.Equal(t, test.payload, payload)
 				assert.Equal(t, test.footer, footer)

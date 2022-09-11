@@ -30,7 +30,7 @@ func (s StrInt) MarshalJSON() ([]byte, error) {
 }
 
 func TestJsonToken(t *testing.T) {
-	symmetricKey := []byte("YELLOW SUBMARINE, BLACK WIZARDRY")
+	symmetricKey := V2SymmetricKey{material: []byte("YELLOW SUBMARINE, BLACK WIZARDRY")}
 	const (
 		audience = "test audience"
 		issuer   = "test issuer"
