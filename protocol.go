@@ -29,6 +29,8 @@ var (
 	ErrDataUnmarshal = errors.New("can't unmarshal token data to the given type of value")
 	// ErrTokenValidationError invalid token data
 	ErrTokenValidationError = errors.New("token validation error")
+	// ErrTokenExpiredError the token was expired
+	ErrTokenExpiredError = errors.New("token is expired")
 )
 
 // Protocol defines the PASETO token protocol interface.
